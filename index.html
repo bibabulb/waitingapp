@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SmartQueue</title>
+<style>
+  body { font-family: sans-serif; margin: 0; padding: 20px; background: #eee; }
+
+  .phone {
+    width: 375px;
+    height: 780px;
+    background: white;
+    border: 2px solid #333;
+    border-radius: 20px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .page { display: none; flex: 1; overflow-y: auto; padding: 12px; }
+  .page.active { display: block; }
+
+  /* Tab bar */
+  .tab-bar { display: flex; border-top: 1px solid #ccc; background: white; flex-shrink: 0; }
+  .tab-bar button {
+    flex: 1; padding: 8px 2px; border: none; background: none;
+    cursor: pointer; font-size: 11px; color: #666;
+  }
+  .tab-bar button.active { font-weight: bold; color: teal; border-top: 2px solid teal; }
+
+  /* Cards */
+  .card { border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .card h3 { margin: 0 0 6px; font-size: 15px; }
+  .card p  { margin: 4px 0; font-size: 13px; color: #444; }
+  progress { width: 100%; height: 10px; margin: 6px 0; }
+
+  /* Buttons */
+  button.action {
+    margin-top: 8px; margin-right: 6px; padding: 6px 12px;
+    background: teal; color: white; border: none;
+    border-radius: 4px; cursor: pointer; font-size: 13px;
+  }
+  button.action:active { opacity: 0.7; }
+  button.secondary {
+    margin-top: 8px; padding: 6px 12px;
+    background: #f0f0f0; color: #333; border: 1px solid #ccc;
+    border-radius: 4px; cursor: pointer; font-size: 13px;
+  }
+  button.secondary:active { background: #e0e0e0; }
+  button.danger {
+    padding: 6px 12px; background: #e55; color: white;
+    border: none; border-radius: 4px; cursor: pointer; font-size: 13px;
+  }
+
+  /* Back button */
+  .back-btn {
+    background: none; border: none; color: teal;
+    cursor: pointer; font-size: 14px; margin-bottom: 10px; padding: 0;
+  }
+
+  /* Menu items */
+  .menu-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px;
+  }
+  .menu-item .item-count { font-size: 13px; color: teal; font-weight: bold; min-width: 20px; text-align: center; }
+
+  /* Sticky queue bar in menu */
+  .sticky-bar {
+    background: #f0f0f0; border: 1px solid #ccc; border-radius: 6px;
+    padding: 8px 10px; margin-bottom: 10px; font-size: 13px;
+  }
+
+  /* AR view */
+  .ar-view {
+    background: #222; color: white; height: 180px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; margin-bottom: 12px;
+    font-size: 14px; text-align: center; line-height: 1.8;
+  }
+
+  /* Roster list */
+  .roster-item {
+    padding: 7px 10px; border-bottom: 1px solid #eee;
+    font-size: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .roster-item.done { color: #aaa; text-decoration: line-through; }
+  .roster-item.current { font-weight: bold; color: teal; background: #f0ffff; }
+  .roster-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+  .roster-item.done .roster-dot { background: #aaa; }
+  .roster-item.current .roster-dot { background: teal; }
+
+  /* Feedback panel */
+  .feedback-panel {
+    display: none; background: #f8f8f8; border: 1px solid #ddd;
+    border-radius: 6px; padding: 10px; margin-top: 8px;
+  }
+  .feedback-panel.open { display: block; }
+  .feedback-panel p { margin: 0 0 6px; font-size: 13px; font-weight: bold; }
+  .feedback-options { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .feedback-chip {
+    padding: 4px 10px; border: 1px solid #ccc; border-radius: 20px;
+    font-size: 12px; cursor: pointer; background: white;
+  }
+  .feedback-chip.selected { background: teal; color: white; border-color: teal; }
+
+  /* Pass Time page */
+  .activity-block {
+    border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 12px;
+  }
+  .activity-block h3 { margin: 0 0 8px; font-size: 14px; }
+  .quiz-option {
+    display: block; width: 100%; text-align: left; padding: 7px 10px;
+    border: 1px solid #ddd; border-radius: 6px; background: white;
+    margin-bottom: 6px; cursor: pointer; font-size: 13px;
+  }
+  .quiz-option:hover { background: #f0ffff; }
+  .quiz-option.correct { background: #d4edda; border-color: green; color: green; }
+  .quiz-option.wrong   { background: #f8d7da; border-color: red;   color: red;   }
+  .word-card {
+    background: #f0ffff; border: 1px solid #b2dfdb;
+    border-radius: 8px; padding: 14px; text-align: center; cursor: pointer;
+  }
+  .word-card .word { font-size: 22px; font-weight: bold; color: teal; }
+  .word-card .meaning { font-size: 13px; color: #555; margin-top: 6px; display: none; }
+
+  /* Wait plan */
+  .plan-section { margin-bottom: 10px; }
+  .plan-section h4 { margin: 0 0 6px; font-size: 13px; color: #555; border-left: 3px solid teal; padding-left: 8px; }
+  .plan-item { font-size: 13px; padding: 4px 0 4px 12px; border-bottom: 1px solid #f0f0f0; }
+
+  /* Confirmation overlay */
+  .confirm-box {
+    display: none; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: white; border: 2px solid teal; border-radius: 10px;
+    padding: 20px; text-align: center; width: 240px; z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+  .confirm-box.show { display: block; }
+  .confirm-box h3 { margin: 0 0 8px; color: teal; }
+  .confirm-box p { font-size: 13px; color: #555; margin: 0 0 14px; }
+
+  /* Phone needs relative positioning for confirm overlay */
+  .phone { position: relative; }
+
+  h2 { margin: 0 0 12px; font-size: 17px; }
+  .section-label { font-size: 12px; font-weight: bold; color: #888; text-transform: uppercase; margin: 14px 0 6px; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+
+  <!-- ══════════════════════
+       PAGE 1: QUEUE PROGRESS
+  ══════════════════════ -->
+  <div class="page active" id="page-progress">
+    <h2>My Queue</h2>
+
+    <!-- Card 1: Haidilao -->
+    <div class="card">
+      <h3>Haidilao Hot Pot &nbsp;<small style="color:#e55;font-size:12px">URGENT</small></h3>
+      <p>Queue No. A-047 &nbsp;|&nbsp; 1 table ahead</p>
+      <progress value="88" max="100"></progress>
+      <p style="font-size:12px;color:#888">Est. wait: ~8 mins</p>
+
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+        <button class="action" onclick="openMenu('Haidilao Hot Pot')">Pre-order Menu</button>
+        <button class="secondary" onclick="toggleFeedback('fb1')">Report Wait Time</button>
+      </div>
+
+      <!-- Feedback panel -->
+      <div class="feedback-panel" id="fb1">
+        <p>How's the actual wait?</p>
+        <div class="feedback-options" id="fb1-wait">
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-wait')">Shorter ✓</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-wait')">As expected</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-wait')">Much longer</span>
+        </div>
+        <p>How crowded is it?</p>
+        <div class="feedback-options" id="fb1-crowd">
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-crowd')">Not crowded</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-crowd')">Moderate</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-crowd')">Very crowded</span>
+        </div>
+        <button class="action" style="margin-top:4px" onclick="submitFeedback('fb1')">Submit</button>
+      </div>
+    </div>
+
+    <!-- Card 2: HeyTea -->
+    <div class="card">
+      <h3>HeyTea</h3>
+      <p>Queue No. B-012 &nbsp;|&nbsp; 3 tables ahead</p>
+      <progress value="52" max="100"></progress>
+      <p style="font-size:12px;color:#888">Est. wait: ~15 mins</p>
+
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+        <button class="action" onclick="openMenu('HeyTea')">Pre-order Menu</button>
+        <button class="secondary" onclick="toggleFeedback('fb2')">Report Wait Time</button>
+      </div>
+
+      <div class="feedback-panel" id="fb2">
+        <p>How's the actual wait?</p>
+        <div class="feedback-options" id="fb2-wait">
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-wait')">Shorter ✓</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-wait')">As expected</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-wait')">Much longer</span>
+        </div>
+        <p>How crowded is it?</p>
+        <div class="feedback-options" id="fb2-crowd">
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-crowd')">Not crowded</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-crowd')">Moderate</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-crowd')">Very crowded</span>
+        </div>
+        <button class="action" style="margin-top:4px" onclick="submitFeedback('fb2')">Submit</button>
+      </div>
+    </div>
+
+    <!-- Card 3: Nayuki -->
+    <div class="card">
+      <h3>Nayuki Ramen</h3>
+      <p>Queue No. C-033 &nbsp;|&nbsp; 6 tables ahead</p>
+      <progress value="28" max="100"></progress>
+      <p style="font-size:12px;color:#888">Est. wait: ~30 mins</p>
+
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+        <button class="action" onclick="openMenu('Nayuki Ramen')">Pre-order Menu</button>
+        <button class="secondary" onclick="toggleFeedback('fb3')">Report Wait Time</button>
+      </div>
+
+      <div class="feedback-panel" id="fb3">
+        <p>How's the actual wait?</p>
+        <div class="feedback-options" id="fb3-wait">
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-wait')">Shorter ✓</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-wait')">As expected</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-wait')">Much longer</span>
+        </div>
+        <p>How crowded is it?</p>
+        <div class="feedback-options" id="fb3-crowd">
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-crowd')">Not crowded</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-crowd')">Moderate</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-crowd')">Very crowded</span>
+        </div>
+        <button class="action" style="margin-top:4px" onclick="submitFeedback('fb3')">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════
+       PAGE 2: MENU (sub-page)
+  ══════════════════════ -->
+  <div class="page" id="page-menu">
+    <button class="back-btn" onclick="closeMenu()">← Back to Queue</button>
+    <div class="sticky-bar" id="menu-queue-bar">
+      🟢 Queue still active — Haidilao · 1 table ahead · ~8 mins
+    </div>
+    <h2 id="menu-title">Menu</h2>
+
+    <div class="menu-item">
+      <span>Spicy Mala Hotpot<br><small style="color:#888">Sichuan broth · $28.90</small></span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
+        <span class="item-count">0</span>
+        <button onclick="changeQty(this,1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">+</button>
+      </div>
+    </div>
+    <div class="menu-item">
+      <span>Premium Wagyu Beef<br><small style="color:#888">A5 sliced · $42.00</small></span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
+        <span class="item-count">0</span>
+        <button onclick="changeQty(this,1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">+</button>
+      </div>
+    </div>
+    <div class="menu-item">
+      <span>Fresh Shrimp Balls<br><small style="color:#888">Hand-wrapped · $16.50</small></span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
+        <span class="item-count">0</span>
+        <button onclick="changeQty(this,1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">+</button>
+      </div>
+    </div>
+    <div class="menu-item">
+      <span>Brown Sugar Boba<br><small style="color:#888">Fresh milk tea · $7.50</small></span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
+        <span class="item-count">0</span>
+        <button onclick="changeQty(this,1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">+</button>
+      </div>
+    </div>
+    <div class="menu-item">
+      <span>Egg Custard Pudding<br><small style="color:#888">Signature dessert · $8.90</small></span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
+        <span class="item-count">0</span>
+        <button onclick="changeQty(this,1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">+</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;padding:10px;background:#f8f8f8;border:1px solid #ddd;border-radius:6px;font-size:13px">
+      <b>Cart: </b><span id="cart-summary">Nothing added yet</span>
+    </div>
+    <button class="action" style="width:100%;margin-top:8px;padding:10px" onclick="submitOrder()">
+      Confirm Pre-order
+    </button>
+  </div>
+
+  <!-- ══════════════════════
+       PAGE 3: QUEUE ROSTER
+  ══════════════════════ -->
+  <div class="page" id="page-roster">
+    <h2>Queue Roster</h2>
+    <p style="font-size:13px;color:#555;margin-bottom:10px">
+      Haidilao · Like a restaurant sign-in book — names are crossed off as tables are called.
+    </p>
+
+    <div id="roster-list">
+      <div class="roster-item done"><span class="roster-dot"></span> A-040 &nbsp;Li Wei · 4 pax</div>
+      <div class="roster-item done"><span class="roster-dot"></span> A-041 &nbsp;Zhang Fang · 2 pax</div>
+      <div class="roster-item done"><span class="roster-dot"></span> A-042 &nbsp;Chen Jing · 6 pax</div>
+      <div class="roster-item done"><span class="roster-dot"></span> A-043 &nbsp;Wang Lei · 3 pax</div>
+      <div class="roster-item done"><span class="roster-dot"></span> A-044 &nbsp;Liu Yang · 2 pax</div>
+      <div class="roster-item done"><span class="roster-dot"></span> A-045 &nbsp;Zhao Min · 5 pax</div>
+      <div class="roster-item done"><span class="roster-dot"></span> A-046 &nbsp;Huang Tao · 4 pax</div>
+      <div class="roster-item current" id="next-in-line"><span class="roster-dot"></span> A-047 &nbsp;YOU · 4 pax &nbsp;⬅ Your turn next!</div>
+      <div class="roster-item"><span class="roster-dot"></span> A-048 &nbsp;Sun Xin · 2 pax</div>
+      <div class="roster-item"><span class="roster-dot"></span> A-049 &nbsp;Xu Ping · 3 pax</div>
+      <div class="roster-item"><span class="roster-dot"></span> A-050 &nbsp;Zhou Rui · 4 pax</div>
+    </div>
+
+    <div style="margin-top:12px">
+      <button class="action" onclick="callNextInRoster()">Simulate: Next Number Called</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════
+       PAGE 4: RECOMMEND
+  ══════════════════════ -->
+  <div class="page" id="page-recommend">
+    <h2>Explore While You Wait</h2>
+
+    <!-- Time-based plan (30 mins for Nayuki) -->
+    <div class="card">
+      <h3>Your Wait Plan — 30 mins (Nayuki)</h3>
+      <div class="plan-section">
+        <h4>0–10 min</h4>
+        <div class="plan-item">☕ Grab a coffee at the café downstairs</div>
+        <div class="plan-item">📱 Play a mini-game in Pass Time tab</div>
+      </div>
+      <div class="plan-section">
+        <h4>10–20 min</h4>
+        <div class="plan-item">🕹️ Head to Galaxy Arcade (120m away)</div>
+        <div class="plan-item">🛍️ Browse the street market</div>
+      </div>
+      <div class="plan-section">
+        <h4>20–30 min</h4>
+        <div class="plan-item">📍 Start heading back — follow AR Map</div>
+        <div class="plan-item">✅ Confirm your pre-order from Menu</div>
+      </div>
+    </div>
+
+    <!-- Nearby entertainment -->
+    <div class="section-label">Nearby Entertainment</div>
+    <div class="card">
+      <p>🕹️ <b>Galaxy Arcade</b> — 120m · DDR, Claw Games, VR Zone</p>
+      <p>🎤 <b>KTV Star Box</b> — 200m · 30-min express $12</p>
+      <p>🛍️ <b>Trendy Street Market</b> — Free entry · Pop-up stores</p>
+      <p>📚 <b>Zhongshuge Bookstore</b> — 350m · Great for photos</p>
+    </div>
+
+    <!-- Alternatives with short queues -->
+    <div class="section-label">Nearby Restaurants — Queue Comparison</div>
+    <div class="card">
+      <p>🍕 <b>Pizza Hut</b> — 5 min wait <progress value="12" max="100" style="width:60%;vertical-align:middle"></progress></p>
+      <p>🍱 <b>Yoshinoya</b> — 8 min wait <progress value="22" max="100" style="width:60%;vertical-align:middle"></progress></p>
+      <p>🥗 <b>Sweetgreen</b> — 12 min wait <progress value="35" max="100" style="width:60%;vertical-align:middle"></progress></p>
+      <p>🍔 <b>Shake Shack</b> — 20 min wait <progress value="55" max="100" style="width:60%;vertical-align:middle"></progress></p>
+      <p style="font-size:11px;color:#888;margin-top:6px">* Based on crowd reports in last 10 mins</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════
+       PAGE 5: PASS TIME
+  ══════════════════════ -->
+  <div class="page" id="page-passtime">
+    <h2>Pass the Time</h2>
+    <p style="font-size:13px;color:#555;margin-bottom:12px">Make the most of your wait — use these bite-sized activities.</p>
+
+    <!-- Vocabulary card -->
+    <div class="activity-block">
+      <h3>📖 Word of the Moment</h3>
+      <div class="word-card" onclick="flipWordCard(this)">
+        <div class="word">Queue</div>
+        <div style="font-size:12px;color:#888;margin-top:4px">(tap to reveal meaning)</div>
+        <div class="meaning">
+          /kjuː/ verb/noun — A line of people or vehicles waiting for something.<br>
+          <i>"There's always a long queue at Haidilao!"</i>
+        </div>
+      </div>
+      <button class="secondary" style="margin-top:8px;width:100%" onclick="nextWord()">Next Word →</button>
+    </div>
+
+    <!-- Trivia quiz -->
+    <div class="activity-block">
+      <h3>🎯 Quick Trivia</h3>
+      <p id="quiz-question" style="font-size:14px;margin-bottom:10px">
+        If you fold a piece of paper in half 42 times, how thick would it be?
+      </p>
+      <div id="quiz-options">
+        <button class="quiz-option" onclick="answerQuiz(this, false)">About 1 metre</button>
+        <button class="quiz-option" onclick="answerQuiz(this, false)">Taller than a building</button>
+        <button class="quiz-option" onclick="answerQuiz(this, true)">Reaches the Moon</button>
+        <button class="quiz-option" onclick="answerQuiz(this, false)">Wraps around Earth</button>
+      </div>
+      <p id="quiz-feedback" style="font-size:13px;color:#555;margin-top:8px;display:none"></p>
+      <button class="secondary" id="next-quiz-btn" style="margin-top:8px;display:none" onclick="nextQuestion()">Next Question →</button>
+    </div>
+
+    <!-- Spin the wheel / random suggestion -->
+    <div class="activity-block">
+      <h3>🎲 What Should I Do?</h3>
+      <p style="font-size:13px;color:#555">Can't decide? Let us pick for you.</p>
+      <button class="action" style="width:100%;margin-top:4px" onclick="spinSuggestion()">Spin!</button>
+      <div id="spin-result" style="margin-top:10px;font-size:14px;font-weight:bold;color:teal;display:none"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════
+       PAGE 6: AR MAP
+  ══════════════════════ -->
+  <div class="page" id="page-ar">
+    <h2>AR Navigate</h2>
+
+    <div class="ar-view">
+      [ Camera / AR View ]<br>
+      ⬆<br>
+      Follow the arrow back to Haidilao<br>
+      <small>120m · ~2 min walk</small>
+    </div>
+
+    <div class="card">
+      <p><b>Route:</b></p>
+      <p>✅ Exit Galaxy Arcade (Level 2)</p>
+      <p>📍 Head north past KTV Star Box — <b>60m</b></p>
+      <p>⬜ Turn right at the fountain — 40m</p>
+      <p>⬜ Haidilao entrance — 20m</p>
+    </div>
+
+    <button class="action"
+      style="width:100%;padding:12px;font-size:15px;background:teal;"
+      id="arrived-btn"
+      onclick="arrivedAtRestaurant()">
+      I've Arrived!
+    </button>
+  </div>
+
+  <!-- ══════════════════════
+       BOTTOM TAB BAR
+  ══════════════════════ -->
+  <div class="tab-bar">
+    <button class="active" id="tab-progress"  onclick="switchTab('progress')">Queue</button>
+    <button id="tab-roster"   onclick="switchTab('roster')">Roster</button>
+    <button id="tab-recommend" onclick="switchTab('recommend')">Explore</button>
+    <button id="tab-passtime" onclick="switchTab('passtime')">Pass Time</button>
+    <button id="tab-ar"       onclick="switchTab('ar')">AR Map</button>
+  </div>
+
+  <!-- ══════════════════════
+       CONFIRM OVERLAY
+  ══════════════════════ -->
+  <div class="confirm-box" id="confirm-box">
+    <h3 id="confirm-title">Done!</h3>
+    <p id="confirm-msg">Your action was completed.</p>
+    <button class="action" onclick="closeConfirm()">OK</button>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+  // ── Tab switching ──────────────────────────────
+  let prevTab = 'progress';
+
+  function switchTab(tab) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + tab).classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+    prevTab = tab;
+  }
+
+  // ── Menu ──────────────────────────────────────
+  function openMenu(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('menu-title').textContent = name + ' — Menu';
+    document.getElementById('menu-queue-bar').textContent =
+      '🟢 Queue still active — ' + name + ' · still in line';
+    document.getElementById('page-menu').classList.add('active');
+    updateCartSummary();
+  }
+
+  function closeMenu() {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + prevTab).classList.add('active');
+  }
+
+  // ── Menu qty ──────────────────────────────────
+  function changeQty(btn, delta) {
+    const row = btn.parentElement;
+    const counter = row.querySelector('.item-count');
+    let n = parseInt(counter.textContent) + delta;
+    if (n < 0) n = 0;
+    counter.textContent = n;
+    updateCartSummary();
+  }
+
+  function updateCartSummary() {
+    const names = ['Spicy Mala Hotpot','Premium Wagyu Beef','Fresh Shrimp Balls','Brown Sugar Boba','Egg Custard Pudding'];
+    const counts = Array.from(document.querySelectorAll('#page-menu .item-count'));
+    const items = counts
+      .map((el, i) => ({ name: names[i], n: parseInt(el.textContent) }))
+      .filter(x => x.n > 0)
+      .map(x => x.name + ' ×' + x.n);
+    document.getElementById('cart-summary').textContent =
+      items.length ? items.join(', ') : 'Nothing added yet';
+  }
+
+  function submitOrder() {
+    const summary = document.getElementById('cart-summary').textContent;
+    if (summary === 'Nothing added yet') {
+      showConfirm('Cart is empty', 'Please add at least one item before confirming.');
+    } else {
+      showConfirm('Pre-order Confirmed! 🎉', 'Your order will be ready when you arrive:\n' + summary);
+    }
+  }
+
+  // ── Feedback ──────────────────────────────────
+  function toggleFeedback(id) {
+    const panel = document.getElementById(id);
+    panel.classList.toggle('open');
+  }
+
+  function selectChip(chip, groupId) {
+    document.querySelectorAll('#' + groupId + ' .feedback-chip')
+      .forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+  }
+
+  function submitFeedback(id) {
+    document.getElementById(id).classList.remove('open');
+    showConfirm('Thanks for your report! 🙏',
+      'Your feedback helps other users know the real wait time.');
+  }
+
+  // ── Queue Roster ──────────────────────────────
+  let rosterQueue = [
+    'A-047 &nbsp;YOU · 4 pax &nbsp;⬅ Your turn next!',
+    'A-048 &nbsp;Sun Xin · 2 pax',
+    'A-049 &nbsp;Xu Ping · 3 pax',
+    'A-050 &nbsp;Zhou Rui · 4 pax'
+  ];
+  let rosterPos = 0;
+
+  function callNextInRoster() {
+    const currentEl = document.getElementById('next-in-line');
+    if (!currentEl) return;
+
+    // Cross off current
+    currentEl.classList.remove('current');
+    currentEl.classList.add('done');
+    currentEl.removeAttribute('id');
+
+    // Advance: make next row "current"
+    const allRows = document.querySelectorAll('#roster-list .roster-item');
+    const doneCount = document.querySelectorAll('#roster-list .roster-item.done').length;
+    const nextRow = allRows[doneCount];
+    if (nextRow) {
+      nextRow.classList.add('current');
+      nextRow.setAttribute('id', 'next-in-line');
+
+      const isYou = nextRow.textContent.includes('YOU');
+      if (isYou) {
+        showConfirm('Your number is up! 🎉', 'A-047 — Please head to Haidilao now!');
+      }
+    } else {
+      showConfirm('Queue ended', 'No more entries in the roster.');
+    }
+  }
+
+  // ── AR: Arrived ───────────────────────────────
+  function arrivedAtRestaurant() {
+    const btn = document.getElementById('arrived-btn');
+    btn.textContent = '✅ Welcome! Table being prepared...';
+    btn.style.background = 'green';
+    btn.disabled = true;
+    showConfirm('Welcome to Haidilao! 🎉',
+      'Your table is being prepared. Please check in at the front desk.\n\nThank you for using SmartQueue!');
+  }
+
+  // ── Pass Time: Word card ──────────────────────
+  const words = [
+    { word: 'Queue',   def: '/kjuː/ — A line of people waiting. "There\'s always a long queue at Haidilao!"' },
+    { word: 'Savor',   def: '/ˈseɪvər/ — To enjoy food slowly and fully. "Savor every bite of hotpot."' },
+    { word: 'Ambient', def: '/ˈæmbiənt/ — Relating to the surrounding environment. "The ambient noise in the mall was relaxing."' },
+    { word: 'Linger',  def: '/ˈlɪŋɡər/ — To stay somewhere longer than expected. "We loved to linger over our meal."' },
+  ];
+  let wordIdx = 0;
+
+  function flipWordCard(card) {
+    const meaning = card.querySelector('.meaning');
+    const hint = card.querySelector('div:not(.word):not(.meaning)');
+    meaning.style.display = meaning.style.display === 'block' ? 'none' : 'block';
+    if (hint) hint.style.display = meaning.style.display === 'block' ? 'none' : '';
+  }
+
+  function nextWord() {
+    wordIdx = (wordIdx + 1) % words.length;
+    const card = document.querySelector('.word-card');
+    card.querySelector('.word').textContent = words[wordIdx].word;
+    card.querySelector('.meaning').textContent = words[wordIdx].def;
+    card.querySelector('.meaning').style.display = 'none';
+    const hint = card.querySelector('div:not(.word):not(.meaning)');
+    if (hint) hint.style.display = '';
+  }
+
+  // ── Pass Time: Quiz ───────────────────────────
+  const questions = [
+    {
+      q: 'If you fold a piece of paper in half 42 times, how thick would it be?',
+      opts: ['About 1 metre','Taller than a building','Reaches the Moon','Wraps around Earth'],
+      answer: 2
+    },
+    {
+      q: 'A group of flamingos is called a...?',
+      opts: ['Pack','Flamboyance','Colony','Flutter'],
+      answer: 1
+    },
+    {
+      q: 'How many muscles does it take to take a single step when walking?',
+      opts: ['About 5','About 20','Over 200','Exactly 42'],
+      answer: 2
+    },
+    {
+      q: 'Honey never spoils. How old is the oldest edible honey ever found?',
+      opts: ['100 years','500 years','3,000 years','10,000 years'],
+      answer: 2
+    },
+    {
+      q: 'If you removed all the empty space from atoms in the human body, how big would we be?',
+      opts: ['Size of a grape','Size of a grain of sugar','Smaller than a dust particle','Invisible to the naked eye'],
+      answer: 1
+    },
+    {
+      q: 'Octopuses have three hearts. What colour is their blood?',
+      opts: ['Red','Yellow','Blue','Clear'],
+      answer: 2
+    },
+  ];
+  let quizIdx = 0;
+  let quizAnswered = false;
+
+  function answerQuiz(btn, isCorrect) {
+    if (quizAnswered) return;
+    quizAnswered = true;
+    const opts = document.querySelectorAll('.quiz-option');
+    opts.forEach(o => o.disabled = true);
+    if (isCorrect) {
+      btn.classList.add('correct');
+      document.getElementById('quiz-feedback').textContent = '✅ Correct! Well done.';
+    } else {
+      btn.classList.add('wrong');
+      // Highlight correct answer
+      opts[questions[quizIdx].answer].classList.add('correct');
+      document.getElementById('quiz-feedback').textContent = '❌ Not quite — see the correct answer above.';
+    }
+    document.getElementById('quiz-feedback').style.display = 'block';
+    document.getElementById('next-quiz-btn').style.display = 'inline-block';
+  }
+
+  function nextQuestion() {
+    quizIdx = (quizIdx + 1) % questions.length;
+    quizAnswered = false;
+    const q = questions[quizIdx];
+    document.getElementById('quiz-question').textContent = q.q;
+    const opts = document.querySelectorAll('.quiz-option');
+    opts.forEach((o, i) => {
+      o.textContent = q.opts[i];
+      o.className = 'quiz-option';
+      o.disabled = false;
+      o.onclick = function() { answerQuiz(this, i === q.answer); };
+    });
+    document.getElementById('quiz-feedback').style.display = 'none';
+    document.getElementById('next-quiz-btn').style.display = 'none';
+  }
+
+  // ── Pass Time: Spin ───────────────────────────
+  const suggestions = [
+    '🕹️ Head to Galaxy Arcade — try the claw machine!',
+    '📖 Flip through a word card to learn something new.',
+    '🎤 Book a 30-min KTV box with your group.',
+    '☕ Grab a drink and people-watch near the fountain.',
+    '📸 Find a photogenic spot in the mall.',
+    '🛍️ Window-shop at the street market (free entry).',
+    '🎯 Challenge a friend to the trivia quiz.',
+    '😴 Find a comfy seat and rest — you\'ve earned it.',
+  ];
+
+  function spinSuggestion() {
+    const pick = suggestions[Math.floor(Math.random() * suggestions.length)];
+    const el = document.getElementById('spin-result');
+    el.style.display = 'block';
+    el.textContent = pick;
+  }
+
+  // ── Confirm overlay ───────────────────────────
+  function showConfirm(title, msg) {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent = msg;
+    document.getElementById('confirm-box').classList.add('show');
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirm-box').classList.remove('show');
+    // Re-enable arrived button if needed
+  }
+</script>
+</body>
+</html>
