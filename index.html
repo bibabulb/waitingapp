@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SmartQueue</title>
+<title>SmartQueue — Trip Companion</title>
 <style>
   body { font-family: sans-serif; margin: 0; padding: 20px; background: #eee; }
 
@@ -148,103 +148,662 @@
 
   h2 { margin: 0 0 12px; font-size: 17px; }
   .section-label { font-size: 12px; font-weight: bold; color: #888; text-transform: uppercase; margin: 14px 0 6px; }
+
+  /* ── Reassurance banner (People Watchers core feature) ── */
+  .reassurance-banner {
+    background: linear-gradient(135deg, #008b8b, #20b2aa);
+    color: white; padding: 10px 12px;
+    flex-shrink: 0; cursor: pointer;
+    transition: background 0.3s;
+  }
+  .reassurance-banner.late {
+    background: linear-gradient(135deg, #cc4444, #dd6655);
+  }
+  .reassurance-banner .verdict {
+    font-size: 14px; font-weight: bold;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .reassurance-banner .detail {
+    font-size: 11px; opacity: 0.95; margin-top: 3px;
+  }
+  .confidence-pill {
+    display: inline-block; background: rgba(255,255,255,0.25);
+    padding: 1px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: normal;
+  }
+  .demo-toggle {
+    font-size: 10px; opacity: 0.6; cursor: pointer;
+    text-align: right; padding: 3px 10px; background: #f8f8f8;
+    border-bottom: 1px solid #eee; flex-shrink: 0;
+  }
+
+  /* ── Timeline cards (trip stages) ── */
+  .timeline-card {
+    border: 1px solid #ccc; border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 10px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .timeline-card.active { border-color: teal; background: #f0ffff; }
+  .timeline-card.done { opacity: 0.6; }
+  .timeline-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 18px; background: #f0ffff;
+  }
+  .timeline-card.done .timeline-icon { background: #e8f5e9; }
+  .timeline-body { flex: 1; }
+  .timeline-body h3 { margin: 0 0 4px; font-size: 14px; }
+  .timeline-body p { margin: 2px 0; font-size: 12px; color: #555; }
+  .timeline-status {
+    font-size: 11px; padding: 1px 6px; border-radius: 10px;
+    background: #e0f2f1; color: teal; display: inline-block; margin-top: 4px;
+  }
+  .timeline-status.warn { background: #fff3e0; color: #e65100; }
+
+  /* ── Scenario tags (Pass Time) ── */
+  .scenario-tag {
+    display: inline-block; font-size: 10px; padding: 1px 6px;
+    border-radius: 8px; background: #e0f2f1; color: teal;
+    margin-left: 6px; vertical-align: middle; font-weight: normal;
+  }
+  .scenario-tag.train { background: #e3f2fd; color: #1565c0; }
+  .scenario-tag.both { background: #f3e5f5; color: #6a1b9a; }
+
+  /* ── AR mode toggle ── */
+  .ar-mode-toggle {
+    display: flex; gap: 4px; margin-bottom: 10px;
+    background: #f0f0f0; border-radius: 6px; padding: 3px;
+  }
+  .ar-mode-toggle button {
+    flex: 1; padding: 6px; border: none; background: none;
+    cursor: pointer; font-size: 12px; border-radius: 4px;
+  }
+  .ar-mode-toggle button.active {
+    background: white; color: teal; font-weight: bold;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* ── Notifications bell + drawer (People Watchers step 8) ── */
+  .notif-bell {
+    position: absolute; top: 8px; right: 12px;
+    background: rgba(255,255,255,0.2); color: white;
+    border: none; border-radius: 50%;
+    width: 30px; height: 30px; cursor: pointer;
+    font-size: 14px; z-index: 50;
+  }
+  .notif-bell:hover { background: rgba(255,255,255,0.35); }
+  .notif-badge {
+    position: absolute; top: -2px; right: -2px;
+    background: #ff5252; color: white;
+    font-size: 9px; font-weight: bold;
+    width: 14px; height: 14px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .notif-drawer {
+    display: none; position: absolute; top: 90px; left: 8px; right: 8px;
+    background: white; border: 1px solid #ccc; border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 60; max-height: 280px; overflow-y: auto;
+  }
+  .notif-drawer.open { display: block; }
+  .notif-drawer h4 {
+    margin: 0; padding: 8px 12px; font-size: 12px; color: #666;
+    background: #f8f8f8; border-bottom: 1px solid #eee;
+  }
+  .notif-item {
+    padding: 10px 12px; border-bottom: 1px solid #f0f0f0;
+    font-size: 12px; display: flex; gap: 8px; align-items: flex-start;
+  }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-item.unread { background: #f0ffff; }
+  .notif-item .notif-ico {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #e0f2f1; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; font-size: 12px;
+  }
+  .notif-item .notif-ico.warn { background: #fff3e0; }
+  .notif-item .notif-body { flex: 1; }
+  .notif-item .notif-time { font-size: 10px; color: #999; margin-top: 2px; }
+
+  /* ── Edit-trip link + modal (People Watchers step 2-3) ── */
+  .edit-trip-link {
+    font-size: 11px; color: white; opacity: 0.9;
+    text-decoration: underline; cursor: pointer;
+    display: inline-block; margin-top: 4px;
+  }
+  .modal-overlay {
+    display: none; position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; background: rgba(0,0,0,0.4);
+    z-index: 200; align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: white; border-radius: 10px;
+    padding: 16px; width: 280px; max-height: 90%;
+    overflow-y: auto;
+  }
+  .modal-box h3 { margin: 0 0 10px; font-size: 16px; color: teal; }
+  .modal-box label {
+    display: block; font-size: 12px; color: #555;
+    margin: 8px 0 3px; font-weight: bold;
+  }
+  .modal-box input, .modal-box select {
+    width: 100%; padding: 6px 8px; border: 1px solid #ccc;
+    border-radius: 5px; font-size: 13px; box-sizing: border-box;
+  }
+  .pref-toggle { display: flex; gap: 4px; margin-top: 4px; }
+  .pref-toggle button {
+    flex: 1; padding: 6px; border: 1px solid #ccc;
+    background: white; border-radius: 5px; cursor: pointer;
+    font-size: 12px;
+  }
+  .pref-toggle button.active {
+    background: teal; color: white; border-color: teal;
+  }
+
+  /* ── Safety info card ── */
+  .safety-card {
+    border: 1px solid #ccc; border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 12px;
+    background: linear-gradient(135deg, #f3e5f5, #fff);
+  }
+  .safety-card h3 {
+    margin: 0 0 6px; font-size: 14px; color: #6a1b9a;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .safety-row {
+    display: flex; justify-content: space-between;
+    font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f0e4f3;
+  }
+  .safety-row:last-child { border-bottom: none; }
+  .safety-row .ok { color: #2e7d32; }
+  .safety-row .warn { color: #e65100; }
+
+  /* ── Trip-complete celebration ── */
+  .celebrate-box {
+    text-align: center; padding: 20px 12px;
+    background: linear-gradient(135deg, #f0ffff, #e8f5e9);
+    border: 2px solid teal; border-radius: 10px;
+    margin-bottom: 12px;
+  }
+  .celebrate-box .big { font-size: 36px; }
+  .celebrate-box h2 { color: teal; margin: 6px 0; }
+  .celebrate-box p { font-size: 13px; color: #555; margin: 4px 0; }
+  .star-row {
+    display: flex; justify-content: center; gap: 6px;
+    font-size: 26px; margin: 10px 0; cursor: pointer;
+  }
+  .star-row span { color: #ddd; transition: color 0.15s; }
+  .star-row span.lit { color: #ffb300; }
+
+  /* ── Alternatives panel (when "won't make it") ── */
+  .alternatives-panel {
+    display: none;
+    background: #fff8e1; border: 1px solid #ffb300;
+    border-radius: 8px; padding: 10px; margin-bottom: 12px;
+  }
+  .alternatives-panel.open { display: block; }
+  .alternatives-panel h3 {
+    margin: 0 0 8px; font-size: 14px; color: #e65100;
+  }
+  .alternatives-panel .alt-item {
+    padding: 7px 0; border-bottom: 1px solid #ffe082; font-size: 13px;
+  }
+  .alternatives-panel .alt-item:last-of-type { border-bottom: none; }
+
+  /* ── Page header row (title + actions inside a tab) ── */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .page-header h2 { margin: 0; }
+  .header-actions { display: flex; gap: 4px; align-items: center; }
+  .header-btn {
+    position: relative;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #f0f0f0; border: none; cursor: pointer;
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+  .header-btn:hover { background: #e0e0e0; }
+  .header-btn .notif-badge {
+    position: absolute; top: -2px; right: -2px;
+    background: #ff5252; color: white; font-size: 9px; font-weight: bold;
+    width: 14px; height: 14px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Reassurance Card (replaces sticky banner) ── */
+  .reassurance-card {
+    border: 2px solid teal;
+    background: linear-gradient(135deg, #f0ffff, #e0f7fa);
+    border-radius: 10px; padding: 14px;
+    margin-bottom: 12px; cursor: pointer;
+    transition: all 0.3s;
+  }
+  .reassurance-card.late {
+    border-color: #cc4444;
+    background: linear-gradient(135deg, #fff0f0, #ffe5e5);
+  }
+  .reassurance-card .verdict-row {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .reassurance-card .icon-big { font-size: 26px; line-height: 1; }
+  .reassurance-card .verdict-text {
+    font-size: 16px; font-weight: bold; color: teal; flex: 1;
+  }
+  .reassurance-card.late .verdict-text { color: #cc4444; }
+  .reassurance-card .conf-pill {
+    background: rgba(0,128,128,0.15); color: teal;
+    padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: bold;
+  }
+  .reassurance-card.late .conf-pill {
+    background: rgba(204,68,68,0.15); color: #cc4444;
+  }
+  .reassurance-card .detail-line {
+    font-size: 12px; color: #555; margin-top: 8px;
+  }
+  .reassurance-card .meta-row {
+    display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .reassurance-card .meta-pill {
+    background: white; border: 1px solid #b2dfdb;
+    padding: 3px 8px; border-radius: 4px; font-size: 11px; color: #555;
+  }
+
+  /* Reposition notification drawer to drop down from header */
+  .notif-drawer {
+    top: 50px;  /* below the in-tab header */
+  }
+
+  /* ── Inline roster panel (was a separate page) ── */
+  .roster-toggle-btn {
+    display: block; width: 100%; margin-top: 6px;
+    padding: 6px 10px; background: #f8f8f8;
+    border: 1px solid #ddd; border-radius: 5px;
+    cursor: pointer; font-size: 12px; color: #555;
+    text-align: left;
+  }
+  .roster-toggle-btn:hover { background: #f0ffff; }
+  .roster-panel {
+    display: none; margin-top: 8px;
+    background: #fafafa; border: 1px solid #eee;
+    border-radius: 6px; padding: 8px;
+  }
+  .roster-panel.open { display: block; }
+  .roster-panel .roster-item {
+    padding: 6px 8px; font-size: 12px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .roster-panel .roster-item:last-child { border-bottom: none; }
+  .roster-panel .roster-item.done { color: #aaa; text-decoration: line-through; }
+  .roster-panel .roster-item.current {
+    font-weight: bold; color: teal; background: #f0ffff;
+    border-radius: 4px;
+  }
+  .roster-panel .roster-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ccc; flex-shrink: 0;
+  }
+  .roster-panel .roster-item.done .roster-dot { background: #aaa; }
+  .roster-panel .roster-item.current .roster-dot { background: teal; }
+  .roster-panel .roster-sim {
+    margin-top: 6px; padding: 5px 8px; background: white;
+    border: 1px dashed #bbb; border-radius: 4px;
+    font-size: 11px; color: #888; cursor: pointer; text-align: center;
+  }
+
+  /* ── Settings page ── */
+  .settings-section {
+    background: white; border: 1px solid #eee; border-radius: 8px;
+    margin-bottom: 12px; overflow: hidden;
+  }
+  .settings-section h3 {
+    margin: 0; padding: 8px 12px; font-size: 12px;
+    color: #888; background: #f8f8f8; text-transform: uppercase;
+    border-bottom: 1px solid #eee; font-weight: bold;
+  }
+  .settings-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px; border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row .label { color: #333; }
+  .settings-row .value { color: #999; font-size: 12px; }
+  .settings-row.tappable { cursor: pointer; }
+  .settings-row.tappable:hover { background: #f8f8f8; }
+  .settings-row .chev { color: #ccc; font-size: 16px; }
+
+  /* iOS-style toggle switch */
+  .switch {
+    position: relative; width: 38px; height: 22px;
+    background: #ccc; border-radius: 11px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: white; transition: left 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .switch.on { background: teal; }
+  .switch.on::after { left: 18px; }
 </style>
 </head>
 <body>
 
 <div class="phone" id="phone">
 
+  <!-- Notifications drawer (drops down from My Trip header bell) -->
+  <div class="notif-drawer" id="notif-drawer">
+    <h4 data-en="LIVE UPDATES" data-zh="实时更新">LIVE UPDATES</h4>
+    <div class="notif-item unread">
+      <div class="notif-ico">🚆</div>
+      <div class="notif-body">
+        <div data-en-html="<b>Train arriving in 2 min</b> — Platform 2, on time."
+             data-zh-html="<b>列车 2 分钟内到达</b> — 站台 2，准时。">
+          <b>Train arriving in 2 min</b> — Platform 2, on time.
+        </div>
+        <div class="notif-time" data-en="just now" data-zh="刚刚">just now</div>
+      </div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-ico warn">📍</div>
+      <div class="notif-body">
+        <div data-en-html="<b>Platform unchanged</b> — still Platform 2 (despite earlier alert)."
+             data-zh-html="<b>站台未变</b> — 仍是站台 2（之前的提醒可忽略）。">
+          <b>Platform unchanged</b> — still Platform 2 (despite earlier alert).
+        </div>
+        <div class="notif-time" data-en="3 min ago" data-zh="3 分钟前">3 min ago</div>
+      </div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-ico">⏱️</div>
+      <div class="notif-body">
+        <div data-en-html="<b>You still have time.</b> Even if next train is 5 min late, you'll arrive by 7:28."
+             data-zh-html="<b>时间还够。</b>就算下一班晚 5 分钟，你也能在 7:28 前到达。">
+          <b>You still have time.</b> Even if next train is 5 min late, you'll arrive by 7:28.
+        </div>
+        <div class="notif-time" data-en="8 min ago" data-zh="8 分钟前">8 min ago</div>
+      </div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-ico">🎉</div>
+      <div class="notif-body">
+        <div data-en="Your booking at Haidilao confirmed for tonight 7:30 (4 pax)."
+             data-zh="海底捞预约已确认：今晚 7:30，4 人。">
+          Your booking at Haidilao confirmed for tonight 7:30 (4 pax).
+        </div>
+        <div class="notif-time" data-en="2 hr ago" data-zh="2 小时前">2 hr ago</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit trip modal (People Watchers step 2-3) -->
+  <div class="modal-overlay" id="trip-modal" onclick="closeTripModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3 data-en="Edit your trip" data-zh="编辑行程">Edit your trip</h3>
+      <label data-en="Current station" data-zh="当前车站">Current station</label>
+      <select>
+        <option data-en="Caulfield Station (auto-detected)" data-zh="Caulfield 站（自动定位）">Caulfield Station (auto-detected)</option>
+        <option data-en="Flinders Street" data-zh="Flinders 街站">Flinders Street</option>
+        <option data-en="Melbourne Central" data-zh="墨尔本中央站">Melbourne Central</option>
+        <option data-en="Flemington Racecourse" data-zh="Flemington 马场站">Flemington Racecourse</option>
+      </select>
+      <label data-en="Destination" data-zh="目的地">Destination</label>
+      <select>
+        <option data-en="Melbourne Central → Haidilao Hot Pot" data-zh="墨尔本中央站 → 海底捞">Melbourne Central → Haidilao Hot Pot</option>
+        <option data-en="Flinders St → HeyTea (Swanston)" data-zh="Flinders 街 → 喜茶（Swanston）">Flinders St → HeyTea (Swanston)</option>
+        <option data-en="Parliament → Nayuki Ramen" data-zh="议会站 → 奈雪拉面">Parliament → Nayuki Ramen</option>
+      </select>
+      <label data-en="Arrival deadline" data-zh="到达截止时间">Arrival deadline</label>
+      <input type="time" value="19:30" />
+      <label data-en="Travel preference" data-zh="出行偏好">Travel preference</label>
+      <div class="pref-toggle">
+        <button class="active" onclick="selectPref(this)" data-en="⚡ Fastest" data-zh="⚡ 最快">⚡ Fastest</button>
+        <button onclick="selectPref(this)" data-en="👥 Less crowded" data-zh="👥 不挤">👥 Less crowded</button>
+        <button onclick="selectPref(this)" data-en="🚶 Fewer transfers" data-zh="🚶 少换乘">🚶 Fewer transfers</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:14px">
+        <button class="secondary" style="flex:1" onclick="closeTripModal()" data-en="Cancel" data-zh="取消">Cancel</button>
+        <button class="action" style="flex:1;margin:0" onclick="saveTripModal()" data-en="Save" data-zh="保存">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══════════════════════
-       PAGE 1: QUEUE PROGRESS
+       PAGE 1: MY TRIP (was: Queue Progress)
   ══════════════════════ -->
   <div class="page active" id="page-progress">
-    <h2>My Queue</h2>
+    <div class="page-header">
+      <h2 data-en="My Trip" data-zh="我的行程">My Trip</h2>
+      <div class="header-actions">
+        <button class="header-btn" onclick="openTripModal(event)" title="Edit trip" data-title-en="Edit trip" data-title-zh="编辑行程">✎</button>
+        <button class="header-btn" onclick="toggleNotifications(event)" title="Live updates" data-title-en="Live updates" data-title-zh="实时更新">
+          🔔<span class="notif-badge" id="notif-badge">3</span>
+        </button>
+      </div>
+    </div>
+    <p style="font-size:12px;color:#888;margin:0 0 10px"
+       data-en="Tonight · 7:30 booking at Haidilao Hot Pot"
+       data-zh="今晚 · 7:30 海底捞预约">
+      Tonight · 7:30 booking at Haidilao Hot Pot
+    </p>
+
+    <!-- Reassurance Card (replaces sticky banner — People Watchers core) -->
+    <div class="reassurance-card" id="reassurance-card" onclick="onReassuranceClick()">
+      <div class="verdict-row">
+        <span class="icon-big" id="rc-icon">✓</span>
+        <span class="verdict-text" id="rc-text">You'll make your 7:30 booking</span>
+        <span class="conf-pill" id="rc-conf">High</span>
+      </div>
+      <div class="detail-line" id="rc-detail">
+        Predicted arrival <b>7:25 PM</b> · 5 min before booking
+      </div>
+      <div class="meta-row">
+        <span class="meta-pill" data-en="🚆 Train 6:42"  data-zh="🚆 列车 6:42">🚆 Train 6:42</span>
+        <span class="meta-pill" data-en="📍 Platform 2"  data-zh="📍 站台 2">📍 Platform 2</span>
+        <span class="meta-pill" data-en="🚶 5 min walk"  data-zh="🚶 步行 5 分钟">🚶 5 min walk</span>
+        <span class="meta-pill" data-en="🍲 12 ahead"   data-zh="🍲 前面 12 桌">🍲 12 ahead</span>
+      </div>
+    </div>
+
+    <!-- Alternatives panel (hidden until "running late" state) -->
+    <div class="alternatives-panel" id="alternatives-panel">
+      <h3 data-en="⚠️ You may not make it on time" data-zh="⚠️ 你可能赶不上">⚠️ You may not make it on time</h3>
+      <div class="alt-item" data-en-html="🚆 <b>Next train (6:54)</b> — would arrive 7:38, 8 min late"
+           data-zh-html="🚆 <b>下一班列车（6:54）</b> — 预计 7:38 到，迟 8 分钟">🚆 <b>Next train (6:54)</b> — would arrive 7:38, 8 min late</div>
+      <div class="alt-item" data-en-html="📞 <b>Call Haidilao</b> — push booking 15 min"
+           data-zh-html="📞 <b>致电海底捞</b> — 把预约延后 15 分钟">📞 <b>Call Haidilao</b> — push booking 15 min</div>
+      <div class="alt-item" data-en-html="🍜 <b>Switch to Nayuki Ramen</b> — no booking, 6 ahead"
+           data-zh-html="🍜 <b>改去 Nayuki 拉面</b> — 无需预约，前面 6 桌">🍜 <b>Switch to Nayuki Ramen</b> — no booking, 6 ahead</div>
+      <button class="secondary" style="width:100%;margin-top:8px" onclick="toggleAlternatives()" data-en="Close" data-zh="关闭">Close</button>
+    </div>
+
+    <!-- Stage 1: Transit -->
+    <div class="timeline-card active">
+      <div class="timeline-icon">🚆</div>
+      <div class="timeline-body">
+        <h3 data-en="Train to Melbourne Central" data-zh="开往墨尔本中央站的列车">Train to Melbourne Central</h3>
+        <p data-en-html="Platform 2 · arriving in <b>6 min</b> (6:42)"
+           data-zh-html="站台 2 · <b>6 分钟</b>后到 (6:42)">Platform 2 · arriving in <b>6 min</b> (6:42)</p>
+        <p style="font-size:11px;color:#888"
+           data-en="Crowd: 🟢 light · Carriage 4 has seats"
+           data-zh="人流：🟢 较少 · 4 号车厢有空座">Crowd: 🟢 light · Carriage 4 has seats</p>
+        <span class="timeline-status" data-en="On time" data-zh="准时">On time</span>
+      </div>
+    </div>
+
+    <!-- Stage 2: Walk -->
+    <div class="timeline-card">
+      <div class="timeline-icon">🚶</div>
+      <div class="timeline-body">
+        <h3 data-en="Walk to Haidilao" data-zh="步行去海底捞">Walk to Haidilao</h3>
+        <p data-en="5 min · 350m via Swanston St"
+           data-zh="5 分钟 · 350 米 · 沿 Swanston 街">5 min · 350m via Swanston St</p>
+        <button class="action" style="margin-top:4px" onclick="switchTab('ar')" data-en="Open Map" data-zh="打开地图">Open Map</button>
+      </div>
+    </div>
+
+    <div class="section-label" data-en="Tonight's queue" data-zh="今晚的排队">Tonight's queue</div>
 
     <!-- Card 1: Haidilao -->
     <div class="card">
-      <h3>Haidilao Hot Pot &nbsp;<small style="color:#e55;font-size:12px">URGENT</small></h3>
-      <p>Queue No. A-047 &nbsp;|&nbsp; 1 table ahead</p>
+      <h3 data-en-html="Haidilao Hot Pot &nbsp;<small style=&quot;color:#e55;font-size:12px&quot;>YOUR BOOKING</small>"
+          data-zh-html="海底捞火锅 &nbsp;<small style=&quot;color:#e55;font-size:12px&quot;>你的预约</small>">Haidilao Hot Pot &nbsp;<small style="color:#e55;font-size:12px">YOUR BOOKING</small></h3>
+      <p data-en="Queue No. A-047  |  1 table ahead"
+         data-zh="排队号 A-047 ｜ 前面还有 1 桌">Queue No. A-047 &nbsp;|&nbsp; 1 table ahead</p>
       <progress value="88" max="100"></progress>
-      <p style="font-size:12px;color:#888">Est. wait: ~8 mins</p>
+      <p style="font-size:12px;color:#888"
+         data-en="Est. wait: ~8 mins · Crowd 🟡 moderate · Indoor seats ✓"
+         data-zh="预计等待：约 8 分钟 · 人流 🟡 中等 · 室内座位 ✓">Est. wait: ~8 mins · Crowd 🟡 moderate · Indoor seats ✓</p>
 
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-        <button class="action" onclick="openMenu('Haidilao Hot Pot')">Pre-order Menu</button>
-        <button class="secondary" onclick="toggleFeedback('fb1')">Report Wait Time</button>
+        <button class="action" onclick="openMenu('Haidilao Hot Pot')" data-en="Pre-order Menu" data-zh="预点菜单">Pre-order Menu</button>
+        <button class="secondary" onclick="toggleFeedback('fb1')" data-en="Report Wait Time" data-zh="报告等待时间">Report Wait Time</button>
+      </div>
+
+      <!-- Inline roster: Haidilao sign-in book -->
+      <button class="roster-toggle-btn" onclick="toggleRoster('roster1')"
+              data-en="📋 View queue position — sign-in book"
+              data-zh="📋 查看排队位置 — 签到簿">
+        📋 View queue position — sign-in book
+      </button>
+      <div class="roster-panel" id="roster1">
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="A-040 Li Wei · 4 pax" data-zh="A-040 李伟 · 4 人">A-040 Li Wei · 4 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="A-041 Zhang Fang · 2 pax" data-zh="A-041 张芳 · 2 人">A-041 Zhang Fang · 2 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="A-042 Chen Jing · 6 pax" data-zh="A-042 陈静 · 6 人">A-042 Chen Jing · 6 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="A-043 Wang Lei · 3 pax" data-zh="A-043 王磊 · 3 人">A-043 Wang Lei · 3 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="A-044 Liu Yang · 2 pax" data-zh="A-044 刘洋 · 2 人">A-044 Liu Yang · 2 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="A-045 Zhao Min · 5 pax" data-zh="A-045 赵敏 · 5 人">A-045 Zhao Min · 5 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="A-046 Huang Tao · 4 pax" data-zh="A-046 黄涛 · 4 人">A-046 Huang Tao · 4 pax</span></div>
+        <div class="roster-item current"><span class="roster-dot"></span> <span data-en="A-047 YOU · 4 pax ⬅ next!" data-zh="A-047 你 · 4 人 ⬅ 下一个！">A-047 YOU · 4 pax ⬅ next!</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="A-048 Sun Xin · 2 pax" data-zh="A-048 孙昕 · 2 人">A-048 Sun Xin · 2 pax</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="A-049 Xu Ping · 3 pax" data-zh="A-049 徐萍 · 3 人">A-049 Xu Ping · 3 pax</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="A-050 Zhou Rui · 4 pax" data-zh="A-050 周睿 · 4 人">A-050 Zhou Rui · 4 pax</span></div>
+        <div class="roster-sim" onclick="callNextInRoster('roster1')" data-en="↪ Simulate: next number called" data-zh="↪ 模拟：叫下一号">↪ Simulate: next number called</div>
       </div>
 
       <!-- Feedback panel -->
       <div class="feedback-panel" id="fb1">
-        <p>How's the actual wait?</p>
+        <p data-en="How's the actual wait?" data-zh="实际等待时间如何？">How's the actual wait?</p>
         <div class="feedback-options" id="fb1-wait">
-          <span class="feedback-chip" onclick="selectChip(this,'fb1-wait')">Shorter ✓</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb1-wait')">As expected</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb1-wait')">Much longer</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-wait')" data-en="Shorter ✓" data-zh="更短 ✓">Shorter ✓</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-wait')" data-en="As expected" data-zh="差不多">As expected</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-wait')" data-en="Much longer" data-zh="长很多">Much longer</span>
         </div>
-        <p>How crowded is it?</p>
+        <p data-en="How crowded is it?" data-zh="人有多挤？">How crowded is it?</p>
         <div class="feedback-options" id="fb1-crowd">
-          <span class="feedback-chip" onclick="selectChip(this,'fb1-crowd')">Not crowded</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb1-crowd')">Moderate</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb1-crowd')">Very crowded</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-crowd')" data-en="Not crowded" data-zh="不挤">Not crowded</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-crowd')" data-en="Moderate" data-zh="一般">Moderate</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb1-crowd')" data-en="Very crowded" data-zh="非常挤">Very crowded</span>
         </div>
-        <button class="action" style="margin-top:4px" onclick="submitFeedback('fb1')">Submit</button>
+        <button class="action" style="margin-top:4px" onclick="submitFeedback('fb1')" data-en="Submit" data-zh="提交">Submit</button>
       </div>
     </div>
 
     <!-- Card 2: HeyTea -->
     <div class="card">
-      <h3>HeyTea</h3>
-      <p>Queue No. B-012 &nbsp;|&nbsp; 3 tables ahead</p>
+      <h3 data-en="HeyTea" data-zh="喜茶">HeyTea</h3>
+      <p data-en="Queue No. B-012  |  3 tables ahead"
+         data-zh="排队号 B-012 ｜ 前面还有 3 桌">Queue No. B-012 &nbsp;|&nbsp; 3 tables ahead</p>
       <progress value="52" max="100"></progress>
-      <p style="font-size:12px;color:#888">Est. wait: ~15 mins</p>
+      <p style="font-size:12px;color:#888"
+         data-en="Est. wait: ~15 mins · Crowd 🟢 light · Outdoor only"
+         data-zh="预计等待：约 15 分钟 · 人流 🟢 较少 · 仅露天">Est. wait: ~15 mins · Crowd 🟢 light · Outdoor only</p>
 
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-        <button class="action" onclick="openMenu('HeyTea')">Pre-order Menu</button>
-        <button class="secondary" onclick="toggleFeedback('fb2')">Report Wait Time</button>
+        <button class="action" onclick="openMenu('HeyTea')" data-en="Pre-order Menu" data-zh="预点菜单">Pre-order Menu</button>
+        <button class="secondary" onclick="toggleFeedback('fb2')" data-en="Report Wait Time" data-zh="报告等待时间">Report Wait Time</button>
+      </div>
+
+      <!-- Inline roster: HeyTea -->
+      <button class="roster-toggle-btn" onclick="toggleRoster('roster2')"
+              data-en="📋 View queue position — sign-in book"
+              data-zh="📋 查看排队位置 — 签到簿">
+        📋 View queue position — sign-in book
+      </button>
+      <div class="roster-panel" id="roster2">
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="B-009 Tan Wei · 1 pax" data-zh="B-009 谭薇 · 1 人">B-009 Tan Wei · 1 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="B-010 Mei Lin · 2 pax" data-zh="B-010 美琳 · 2 人">B-010 Mei Lin · 2 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="B-011 Wu Jian · 1 pax" data-zh="B-011 吴健 · 1 人">B-011 Wu Jian · 1 pax</span></div>
+        <div class="roster-item current"><span class="roster-dot"></span> <span data-en="B-012 YOU · 2 pax · 3 ahead" data-zh="B-012 你 · 2 人 · 前面 3 位">B-012 YOU · 2 pax · 3 ahead</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="B-013 He Lan · 1 pax" data-zh="B-013 何兰 · 1 人">B-013 He Lan · 1 pax</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="B-014 Lin Zhi · 4 pax" data-zh="B-014 林志 · 4 人">B-014 Lin Zhi · 4 pax</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="B-015 Yu Hao · 1 pax" data-zh="B-015 余浩 · 1 人">B-015 Yu Hao · 1 pax</span></div>
+        <div class="roster-sim" onclick="callNextInRoster('roster2')" data-en="↪ Simulate: next number called" data-zh="↪ 模拟：叫下一号">↪ Simulate: next number called</div>
       </div>
 
       <div class="feedback-panel" id="fb2">
-        <p>How's the actual wait?</p>
+        <p data-en="How's the actual wait?" data-zh="实际等待时间如何？">How's the actual wait?</p>
         <div class="feedback-options" id="fb2-wait">
-          <span class="feedback-chip" onclick="selectChip(this,'fb2-wait')">Shorter ✓</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb2-wait')">As expected</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb2-wait')">Much longer</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-wait')" data-en="Shorter ✓" data-zh="更短 ✓">Shorter ✓</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-wait')" data-en="As expected" data-zh="差不多">As expected</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-wait')" data-en="Much longer" data-zh="长很多">Much longer</span>
         </div>
-        <p>How crowded is it?</p>
+        <p data-en="How crowded is it?" data-zh="人有多挤？">How crowded is it?</p>
         <div class="feedback-options" id="fb2-crowd">
-          <span class="feedback-chip" onclick="selectChip(this,'fb2-crowd')">Not crowded</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb2-crowd')">Moderate</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb2-crowd')">Very crowded</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-crowd')" data-en="Not crowded" data-zh="不挤">Not crowded</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-crowd')" data-en="Moderate" data-zh="一般">Moderate</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb2-crowd')" data-en="Very crowded" data-zh="非常挤">Very crowded</span>
         </div>
-        <button class="action" style="margin-top:4px" onclick="submitFeedback('fb2')">Submit</button>
+        <button class="action" style="margin-top:4px" onclick="submitFeedback('fb2')" data-en="Submit" data-zh="提交">Submit</button>
       </div>
     </div>
 
     <!-- Card 3: Nayuki -->
     <div class="card">
-      <h3>Nayuki Ramen</h3>
-      <p>Queue No. C-033 &nbsp;|&nbsp; 6 tables ahead</p>
+      <h3 data-en="Nayuki Ramen" data-zh="奈雪拉面">Nayuki Ramen</h3>
+      <p data-en="Queue No. C-033  |  6 tables ahead"
+         data-zh="排队号 C-033 ｜ 前面还有 6 桌">Queue No. C-033 &nbsp;|&nbsp; 6 tables ahead</p>
       <progress value="28" max="100"></progress>
-      <p style="font-size:12px;color:#888">Est. wait: ~30 mins</p>
+      <p style="font-size:12px;color:#888"
+         data-en="Est. wait: ~30 mins"
+         data-zh="预计等待：约 30 分钟">Est. wait: ~30 mins</p>
 
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-        <button class="action" onclick="openMenu('Nayuki Ramen')">Pre-order Menu</button>
-        <button class="secondary" onclick="toggleFeedback('fb3')">Report Wait Time</button>
+        <button class="action" onclick="openMenu('Nayuki Ramen')" data-en="Pre-order Menu" data-zh="预点菜单">Pre-order Menu</button>
+        <button class="secondary" onclick="toggleFeedback('fb3')" data-en="Report Wait Time" data-zh="报告等待时间">Report Wait Time</button>
+      </div>
+
+      <!-- Inline roster: Nayuki -->
+      <button class="roster-toggle-btn" onclick="toggleRoster('roster3')"
+              data-en="📋 View queue position — sign-in book"
+              data-zh="📋 查看排队位置 — 签到簿">
+        📋 View queue position — sign-in book
+      </button>
+      <div class="roster-panel" id="roster3">
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="C-027 Park Su · 2 pax" data-zh="C-027 朴秀 · 2 人">C-027 Park Su · 2 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="C-028 Cho Min · 3 pax" data-zh="C-028 赵敏 · 3 人">C-028 Cho Min · 3 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="C-029 Kim Ha · 4 pax" data-zh="C-029 金贺 · 4 人">C-029 Kim Ha · 4 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="C-030 Lee Bo · 2 pax" data-zh="C-030 李宝 · 2 人">C-030 Lee Bo · 2 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="C-031 Han Ji · 5 pax" data-zh="C-031 韩智 · 5 人">C-031 Han Ji · 5 pax</span></div>
+        <div class="roster-item done"><span class="roster-dot"></span> <span data-en="C-032 Oh Ye · 2 pax" data-zh="C-032 吴叶 · 2 人">C-032 Oh Ye · 2 pax</span></div>
+        <div class="roster-item current"><span class="roster-dot"></span> <span data-en="C-033 YOU · 3 pax · 6 ahead" data-zh="C-033 你 · 3 人 · 前面 6 位">C-033 YOU · 3 pax · 6 ahead</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="C-034 Jung Mi · 4 pax" data-zh="C-034 郑美 · 4 人">C-034 Jung Mi · 4 pax</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="C-035 Shin Ki · 2 pax" data-zh="C-035 申基 · 2 人">C-035 Shin Ki · 2 pax</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="C-036 Bae Yun · 3 pax" data-zh="C-036 裴允 · 3 人">C-036 Bae Yun · 3 pax</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="C-037 Yoo Na · 1 pax" data-zh="C-037 刘娜 · 1 人">C-037 Yoo Na · 1 pax</span></div>
+        <div class="roster-item"><span class="roster-dot"></span> <span data-en="C-038 Hwang Su · 2 pax" data-zh="C-038 黄秀 · 2 人">C-038 Hwang Su · 2 pax</span></div>
+        <div class="roster-sim" onclick="callNextInRoster('roster3')" data-en="↪ Simulate: next number called" data-zh="↪ 模拟：叫下一号">↪ Simulate: next number called</div>
       </div>
 
       <div class="feedback-panel" id="fb3">
-        <p>How's the actual wait?</p>
+        <p data-en="How's the actual wait?" data-zh="实际等待时间如何？">How's the actual wait?</p>
         <div class="feedback-options" id="fb3-wait">
-          <span class="feedback-chip" onclick="selectChip(this,'fb3-wait')">Shorter ✓</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb3-wait')">As expected</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb3-wait')">Much longer</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-wait')" data-en="Shorter ✓" data-zh="更短 ✓">Shorter ✓</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-wait')" data-en="As expected" data-zh="差不多">As expected</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-wait')" data-en="Much longer" data-zh="长很多">Much longer</span>
         </div>
-        <p>How crowded is it?</p>
+        <p data-en="How crowded is it?" data-zh="人有多挤？">How crowded is it?</p>
         <div class="feedback-options" id="fb3-crowd">
-          <span class="feedback-chip" onclick="selectChip(this,'fb3-crowd')">Not crowded</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb3-crowd')">Moderate</span>
-          <span class="feedback-chip" onclick="selectChip(this,'fb3-crowd')">Very crowded</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-crowd')" data-en="Not crowded" data-zh="不挤">Not crowded</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-crowd')" data-en="Moderate" data-zh="一般">Moderate</span>
+          <span class="feedback-chip" onclick="selectChip(this,'fb3-crowd')" data-en="Very crowded" data-zh="非常挤">Very crowded</span>
         </div>
-        <button class="action" style="margin-top:4px" onclick="submitFeedback('fb3')">Submit</button>
+        <button class="action" style="margin-top:4px" onclick="submitFeedback('fb3')" data-en="Submit" data-zh="提交">Submit</button>
       </div>
     </div>
   </div>
@@ -253,14 +812,16 @@
        PAGE 2: MENU (sub-page)
   ══════════════════════ -->
   <div class="page" id="page-menu">
-    <button class="back-btn" onclick="closeMenu()">← Back to Queue</button>
-    <div class="sticky-bar" id="menu-queue-bar">
+    <button class="back-btn" onclick="closeMenu()" data-en="← Back to Queue" data-zh="← 返回排队">← Back to Queue</button>
+    <div class="sticky-bar" id="menu-queue-bar"
+         data-en="🟢 Queue still active — Haidilao · 1 table ahead · ~8 mins"
+         data-zh="🟢 排队中 — 海底捞 · 前面 1 桌 · 约 8 分钟">
       🟢 Queue still active — Haidilao · 1 table ahead · ~8 mins
     </div>
     <h2 id="menu-title">Menu</h2>
 
     <div class="menu-item">
-      <span>Spicy Mala Hotpot<br><small style="color:#888">Sichuan broth · $28.90</small></span>
+      <span><span data-en="Spicy Mala Hotpot" data-zh="麻辣火锅">Spicy Mala Hotpot</span><br><small style="color:#888" data-en="Sichuan broth · $28.90" data-zh="川式锅底 · $28.90">Sichuan broth · $28.90</small></span>
       <div style="display:flex;align-items:center;gap:6px">
         <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
         <span class="item-count">0</span>
@@ -268,7 +829,7 @@
       </div>
     </div>
     <div class="menu-item">
-      <span>Premium Wagyu Beef<br><small style="color:#888">A5 sliced · $42.00</small></span>
+      <span><span data-en="Premium Wagyu Beef" data-zh="顶级和牛">Premium Wagyu Beef</span><br><small style="color:#888" data-en="A5 sliced · $42.00" data-zh="A5 切片 · $42.00">A5 sliced · $42.00</small></span>
       <div style="display:flex;align-items:center;gap:6px">
         <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
         <span class="item-count">0</span>
@@ -276,7 +837,7 @@
       </div>
     </div>
     <div class="menu-item">
-      <span>Fresh Shrimp Balls<br><small style="color:#888">Hand-wrapped · $16.50</small></span>
+      <span><span data-en="Fresh Shrimp Balls" data-zh="鲜虾滑">Fresh Shrimp Balls</span><br><small style="color:#888" data-en="Hand-wrapped · $16.50" data-zh="手工包制 · $16.50">Hand-wrapped · $16.50</small></span>
       <div style="display:flex;align-items:center;gap:6px">
         <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
         <span class="item-count">0</span>
@@ -284,7 +845,7 @@
       </div>
     </div>
     <div class="menu-item">
-      <span>Brown Sugar Boba<br><small style="color:#888">Fresh milk tea · $7.50</small></span>
+      <span><span data-en="Brown Sugar Boba" data-zh="黑糖珍珠奶茶">Brown Sugar Boba</span><br><small style="color:#888" data-en="Fresh milk tea · $7.50" data-zh="鲜奶茶 · $7.50">Fresh milk tea · $7.50</small></span>
       <div style="display:flex;align-items:center;gap:6px">
         <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
         <span class="item-count">0</span>
@@ -292,7 +853,7 @@
       </div>
     </div>
     <div class="menu-item">
-      <span>Egg Custard Pudding<br><small style="color:#888">Signature dessert · $8.90</small></span>
+      <span><span data-en="Egg Custard Pudding" data-zh="蛋黄布丁">Egg Custard Pudding</span><br><small style="color:#888" data-en="Signature dessert · $8.90" data-zh="招牌甜品 · $8.90">Signature dessert · $8.90</small></span>
       <div style="display:flex;align-items:center;gap:6px">
         <button onclick="changeQty(this,-1)" style="border:1px solid #ccc;background:white;width:24px;cursor:pointer">−</button>
         <span class="item-count">0</span>
@@ -301,84 +862,116 @@
     </div>
 
     <div style="margin-top:12px;padding:10px;background:#f8f8f8;border:1px solid #ddd;border-radius:6px;font-size:13px">
-      <b>Cart: </b><span id="cart-summary">Nothing added yet</span>
+      <b data-en="Cart: " data-zh="购物车：">Cart: </b><span id="cart-summary">Nothing added yet</span>
     </div>
-    <button class="action" style="width:100%;margin-top:8px;padding:10px" onclick="submitOrder()">
+    <button class="action" style="width:100%;margin-top:8px;padding:10px" onclick="submitOrder()" data-en="Confirm Pre-order" data-zh="确认预点单">
       Confirm Pre-order
     </button>
   </div>
 
   <!-- ══════════════════════
-       PAGE 3: QUEUE ROSTER
-  ══════════════════════ -->
-  <div class="page" id="page-roster">
-    <h2>Queue Roster</h2>
-    <p style="font-size:13px;color:#555;margin-bottom:10px">
-      Haidilao · Like a restaurant sign-in book — names are crossed off as tables are called.
-    </p>
-
-    <div id="roster-list">
-      <div class="roster-item done"><span class="roster-dot"></span> A-040 &nbsp;Li Wei · 4 pax</div>
-      <div class="roster-item done"><span class="roster-dot"></span> A-041 &nbsp;Zhang Fang · 2 pax</div>
-      <div class="roster-item done"><span class="roster-dot"></span> A-042 &nbsp;Chen Jing · 6 pax</div>
-      <div class="roster-item done"><span class="roster-dot"></span> A-043 &nbsp;Wang Lei · 3 pax</div>
-      <div class="roster-item done"><span class="roster-dot"></span> A-044 &nbsp;Liu Yang · 2 pax</div>
-      <div class="roster-item done"><span class="roster-dot"></span> A-045 &nbsp;Zhao Min · 5 pax</div>
-      <div class="roster-item done"><span class="roster-dot"></span> A-046 &nbsp;Huang Tao · 4 pax</div>
-      <div class="roster-item current" id="next-in-line"><span class="roster-dot"></span> A-047 &nbsp;YOU · 4 pax &nbsp;⬅ Your turn next!</div>
-      <div class="roster-item"><span class="roster-dot"></span> A-048 &nbsp;Sun Xin · 2 pax</div>
-      <div class="roster-item"><span class="roster-dot"></span> A-049 &nbsp;Xu Ping · 3 pax</div>
-      <div class="roster-item"><span class="roster-dot"></span> A-050 &nbsp;Zhou Rui · 4 pax</div>
-    </div>
-
-    <div style="margin-top:12px">
-      <button class="action" onclick="callNextInRoster()">Simulate: Next Number Called</button>
-    </div>
-  </div>
-
-  <!-- ══════════════════════
-       PAGE 4: RECOMMEND
+       PAGE 3: RECOMMEND
+       (was page 4 — page-roster has been merged into per-restaurant cards)
   ══════════════════════ -->
   <div class="page" id="page-recommend">
-    <h2>Explore While You Wait</h2>
+    <h2 data-en="Plan Your Trip" data-zh="规划行程">Plan Your Trip</h2>
 
-    <!-- Time-based plan (30 mins for Nayuki) -->
+    <!-- ON THE WAY (transit tips) -->
+    <div class="section-label" data-en="On your way · Train tips" data-zh="路上 · 列车小贴士">On your way · Train tips</div>
     <div class="card">
-      <h3>Your Wait Plan — 30 mins (Nayuki)</h3>
+      <p data-en-html="🚆 <b>Carriage 4</b> — usually has free seats at this hour"
+         data-zh-html="🚆 <b>4 号车厢</b> — 这个点通常有空位">🚆 <b>Carriage 4</b> — usually has free seats at this hour</p>
+      <p data-en-html="🚪 <b>Exit via Door B</b> at Melbourne Central — closest to Swanston St"
+         data-zh-html="🚪 在墨尔本中央站 <b>从 B 出口出</b> — 离 Swanston 街最近">🚪 <b>Exit via Door B</b> at Melbourne Central — closest to Swanston St</p>
+      <p data-en-html="⏱️ <b>Express 6:42</b> saves 4 min vs all-stops 6:48"
+         data-zh-html="⏱️ <b>6:42 直达车</b>比 6:48 站站停快 4 分钟">⏱️ <b>Express 6:42</b> saves 4 min vs all-stops 6:48</p>
+      <p style="font-size:11px;color:#888;margin-top:6px"
+         data-en="* Based on crowd reports from regular commuters"
+         data-zh="* 数据来自常乘客的人流上报">* Based on crowd reports from regular commuters</p>
+    </div>
+
+    <div class="section-label" data-en="Saved trips" data-zh="已保存的行程">Saved trips</div>
+    <div class="card">
+      <p data-en-html="⭐ <b>Caulfield → Melb Central</b> · used 14× this month"
+         data-zh-html="⭐ <b>Caulfield → 墨尔本中央站</b> · 本月用了 14 次">⭐ <b>Caulfield → Melb Central</b> · used 14× this month</p>
+      <p data-en-html="⭐ <b>Home → Chinatown (Friday dinner)</b> · used 6×"
+         data-zh-html="⭐ <b>家 → 唐人街（周五晚餐）</b> · 用了 6 次">⭐ <b>Home → Chinatown (Friday dinner)</b> · used 6×</p>
+    </div>
+
+    <!-- Safety Info -->
+    <div class="section-label" data-en="Safety at this station" data-zh="车站安全信息">Safety at this station</div>
+    <div class="safety-card">
+      <h3 data-en="🛡️ Caulfield Station — tonight" data-zh="🛡️ Caulfield 站 — 今晚">🛡️ Caulfield Station — tonight</h3>
+      <div class="safety-row">
+        <span data-en="Lighting" data-zh="照明">Lighting</span><span class="ok" data-en="● Well-lit" data-zh="● 明亮">● Well-lit</span>
+      </div>
+      <div class="safety-row">
+        <span data-en="Foot traffic" data-zh="人流量">Foot traffic</span><span class="ok" data-en="● Moderate (commuter hours)" data-zh="● 中等（通勤时段）">● Moderate (commuter hours)</span>
+      </div>
+      <div class="safety-row">
+        <span data-en="Help points" data-zh="求助点">Help points</span><span data-en="2 within 50m of Platform 2" data-zh="站台 2 50 米内有 2 处">2 within 50m of Platform 2</span>
+      </div>
+      <div class="safety-row">
+        <span data-en="Staff on duty" data-zh="值班员工">Staff on duty</span><span class="ok" data-en="● Until 11:30 PM" data-zh="● 至 11:30 PM">● Until 11:30 PM</span>
+      </div>
+      <div class="safety-row">
+        <span data-en="After 10 PM" data-zh="10 点后">After 10 PM</span><span class="warn" data-en="● Use Carriage 1 (near driver)" data-zh="● 建议乘 1 号车厢（靠近司机）">● Use Carriage 1 (near driver)</span>
+      </div>
+      <p style="font-size:11px;color:#888;margin-top:6px"
+         data-en="Tap & hold the bell 🔔 in any view to send a quick alert to staff."
+         data-zh="任何页面长按铃铛 🔔 可向工作人员发送快速求助。">
+        Tap & hold the bell 🔔 in any view to send a quick alert to staff.
+      </p>
+    </div>
+
+    <!-- WHILE WAITING -->
+    <div class="section-label" data-en="While waiting in queue" data-zh="排队等位时">While waiting in queue</div>
+    <div class="card">
+      <h3 data-en="Your Wait Plan — 30 mins (Nayuki)" data-zh="等待计划 — 30 分钟（奈雪）">Your Wait Plan — 30 mins (Nayuki)</h3>
       <div class="plan-section">
-        <h4>0–10 min</h4>
-        <div class="plan-item">☕ Grab a coffee at the café downstairs</div>
-        <div class="plan-item">📱 Play a mini-game in Pass Time tab</div>
+        <h4 data-en="0–10 min" data-zh="0–10 分钟">0–10 min</h4>
+        <div class="plan-item" data-en="☕ Grab a coffee at the café downstairs" data-zh="☕ 楼下咖啡店买杯咖啡">☕ Grab a coffee at the café downstairs</div>
+        <div class="plan-item" data-en="📱 Play a mini-game in Pass Time tab" data-zh="📱 在「消磨时间」里玩个小游戏">📱 Play a mini-game in Pass Time tab</div>
       </div>
       <div class="plan-section">
-        <h4>10–20 min</h4>
-        <div class="plan-item">🕹️ Head to Galaxy Arcade (120m away)</div>
-        <div class="plan-item">🛍️ Browse the street market</div>
+        <h4 data-en="10–20 min" data-zh="10–20 分钟">10–20 min</h4>
+        <div class="plan-item" data-en="🕹️ Head to Galaxy Arcade (120m away)" data-zh="🕹️ 去 Galaxy 游戏厅（120 米外）">🕹️ Head to Galaxy Arcade (120m away)</div>
+        <div class="plan-item" data-en="🛍️ Browse the street market" data-zh="🛍️ 逛逛街边市集">🛍️ Browse the street market</div>
       </div>
       <div class="plan-section">
-        <h4>20–30 min</h4>
-        <div class="plan-item">📍 Start heading back — follow AR Map</div>
-        <div class="plan-item">✅ Confirm your pre-order from Menu</div>
+        <h4 data-en="20–30 min" data-zh="20–30 分钟">20–30 min</h4>
+        <div class="plan-item" data-en="📍 Start heading back — follow AR Map" data-zh="📍 准备回去 — 跟随地图">📍 Start heading back — follow AR Map</div>
+        <div class="plan-item" data-en="✅ Confirm your pre-order from Menu" data-zh="✅ 确认你的预点单">✅ Confirm your pre-order from Menu</div>
       </div>
     </div>
 
     <!-- Nearby entertainment -->
-    <div class="section-label">Nearby Entertainment</div>
+    <div class="section-label" data-en="Nearby Entertainment" data-zh="附近娱乐">Nearby Entertainment</div>
     <div class="card">
-      <p>🕹️ <b>Galaxy Arcade</b> — 120m · DDR, Claw Games, VR Zone</p>
-      <p>🎤 <b>KTV Star Box</b> — 200m · 30-min express $12</p>
-      <p>🛍️ <b>Trendy Street Market</b> — Free entry · Pop-up stores</p>
-      <p>📚 <b>Zhongshuge Bookstore</b> — 350m · Great for photos</p>
+      <p data-en-html="🕹️ <b>Galaxy Arcade</b> — 120m · DDR, Claw Games, VR Zone"
+         data-zh-html="🕹️ <b>Galaxy 游戏厅</b> — 120 米 · 跳舞机、夹娃娃、VR 区">🕹️ <b>Galaxy Arcade</b> — 120m · DDR, Claw Games, VR Zone</p>
+      <p data-en-html="🎤 <b>KTV Star Box</b> — 200m · 30-min express $12"
+         data-zh-html="🎤 <b>KTV 星空包厢</b> — 200 米 · 30 分钟快唱 $12">🎤 <b>KTV Star Box</b> — 200m · 30-min express $12</p>
+      <p data-en-html="🛍️ <b>Trendy Street Market</b> — Free entry · Pop-up stores"
+         data-zh-html="🛍️ <b>潮流街市</b> — 免费入场 · 各类快闪店">🛍️ <b>Trendy Street Market</b> — Free entry · Pop-up stores</p>
+      <p data-en-html="📚 <b>Zhongshuge Bookstore</b> — 350m · Great for photos"
+         data-zh-html="📚 <b>钟书阁书店</b> — 350 米 · 拍照圣地">📚 <b>Zhongshuge Bookstore</b> — 350m · Great for photos</p>
     </div>
 
     <!-- Alternatives with short queues -->
-    <div class="section-label">Nearby Restaurants — Queue Comparison</div>
+    <div class="section-label" data-en="Nearby Restaurants — Queue Comparison" data-zh="附近餐厅 — 排队对比">Nearby Restaurants — Queue Comparison</div>
     <div class="card">
-      <p>🍕 <b>Pizza Hut</b> — 5 min wait <progress value="12" max="100" style="width:60%;vertical-align:middle"></progress></p>
-      <p>🍱 <b>Yoshinoya</b> — 8 min wait <progress value="22" max="100" style="width:60%;vertical-align:middle"></progress></p>
-      <p>🥗 <b>Sweetgreen</b> — 12 min wait <progress value="35" max="100" style="width:60%;vertical-align:middle"></progress></p>
-      <p>🍔 <b>Shake Shack</b> — 20 min wait <progress value="55" max="100" style="width:60%;vertical-align:middle"></progress></p>
-      <p style="font-size:11px;color:#888;margin-top:6px">* Based on crowd reports in last 10 mins</p>
+      <p data-en-html="🍕 <b>Pizza Hut</b> — 5 min wait <progress value=&quot;12&quot; max=&quot;100&quot; style=&quot;width:60%;vertical-align:middle&quot;></progress>"
+         data-zh-html="🍕 <b>必胜客</b> — 等位 5 分钟 <progress value=&quot;12&quot; max=&quot;100&quot; style=&quot;width:60%;vertical-align:middle&quot;></progress>">🍕 <b>Pizza Hut</b> — 5 min wait <progress value="12" max="100" style="width:60%;vertical-align:middle"></progress></p>
+      <p data-en-html="🍱 <b>Yoshinoya</b> — 8 min wait <progress value=&quot;22&quot; max=&quot;100&quot; style=&quot;width:60%;vertical-align:middle&quot;></progress>"
+         data-zh-html="🍱 <b>吉野家</b> — 等位 8 分钟 <progress value=&quot;22&quot; max=&quot;100&quot; style=&quot;width:60%;vertical-align:middle&quot;></progress>">🍱 <b>Yoshinoya</b> — 8 min wait <progress value="22" max="100" style="width:60%;vertical-align:middle"></progress></p>
+      <p data-en-html="🥗 <b>Sweetgreen</b> — 12 min wait <progress value=&quot;35&quot; max=&quot;100&quot; style=&quot;width:60%;vertical-align:middle&quot;></progress>"
+         data-zh-html="🥗 <b>Sweetgreen</b> — 等位 12 分钟 <progress value=&quot;35&quot; max=&quot;100&quot; style=&quot;width:60%;vertical-align:middle&quot;></progress>">🥗 <b>Sweetgreen</b> — 12 min wait <progress value="35" max="100" style="width:60%;vertical-align:middle"></progress></p>
+      <p data-en-html="🍔 <b>Shake Shack</b> — 20 min wait <progress value=&quot;55&quot; max=&quot;100&quot; style=&quot;width:60%;vertical-align:middle&quot;></progress>"
+         data-zh-html="🍔 <b>Shake Shack</b> — 等位 20 分钟 <progress value=&quot;55&quot; max=&quot;100&quot; style=&quot;width:60%;vertical-align:middle&quot;></progress>">🍔 <b>Shake Shack</b> — 20 min wait <progress value="55" max="100" style="width:60%;vertical-align:middle"></progress></p>
+      <p style="font-size:11px;color:#888;margin-top:6px"
+         data-en="* Based on crowd reports in last 10 mins"
+         data-zh="* 数据基于最近 10 分钟的人流上报">* Based on crowd reports in last 10 mins</p>
     </div>
   </div>
 
@@ -386,44 +979,51 @@
        PAGE 5: PASS TIME
   ══════════════════════ -->
   <div class="page" id="page-passtime">
-    <h2>Pass the Time</h2>
-    <p style="font-size:13px;color:#555;margin-bottom:12px">Make the most of your wait — use these bite-sized activities.</p>
+    <h2 data-en="Pass the Time" data-zh="消磨时间">Pass the Time</h2>
+    <p style="font-size:13px;color:#555;margin-bottom:12px"
+       data-en="Make the most of your wait — use these bite-sized activities."
+       data-zh="把等待时间利用起来 — 来玩点小活动。">Make the most of your wait — use these bite-sized activities.</p>
 
     <!-- Vocabulary card -->
     <div class="activity-block">
-      <h3>📖 Word of the Moment</h3>
+      <h3>📖 <span data-en="Word of the Moment" data-zh="每日单词">Word of the Moment</span> <span class="scenario-tag both" data-en="🚆 + 🍵 anywhere" data-zh="🚆 + 🍵 都适合">🚆 + 🍵 anywhere</span></h3>
       <div class="word-card" onclick="flipWordCard(this)">
         <div class="word">Queue</div>
-        <div style="font-size:12px;color:#888;margin-top:4px">(tap to reveal meaning)</div>
-        <div class="meaning">
+        <div style="font-size:12px;color:#888;margin-top:4px"
+             data-en="(tap to reveal meaning)" data-zh="（点击查看释义）">(tap to reveal meaning)</div>
+        <div class="meaning"
+             data-en='/kjuː/ verb/noun — A line of people or vehicles waiting for something. "There&apos;s always a long queue at Haidilao!"'
+             data-zh='/kjuː/ — 排队的一行人。"海底捞总是排长队！"'>
           /kjuː/ verb/noun — A line of people or vehicles waiting for something.<br>
           <i>"There's always a long queue at Haidilao!"</i>
         </div>
       </div>
-      <button class="secondary" style="margin-top:8px;width:100%" onclick="nextWord()">Next Word →</button>
+      <button class="secondary" style="margin-top:8px;width:100%" onclick="nextWord()" data-en="Next Word →" data-zh="下一个单词 →">Next Word →</button>
     </div>
 
     <!-- Trivia quiz -->
     <div class="activity-block">
-      <h3>🎯 Quick Trivia</h3>
-      <p id="quiz-question" style="font-size:14px;margin-bottom:10px">
+      <h3>🎯 <span data-en="Quick Trivia" data-zh="趣味小测">Quick Trivia</span> <span class="scenario-tag train" data-en="🚆 best on train" data-zh="🚆 适合车上">🚆 best on train</span></h3>
+      <p id="quiz-question" style="font-size:14px;margin-bottom:10px"
+         data-en="If you fold a piece of paper in half 42 times, how thick would it be?"
+         data-zh="一张纸对折 42 次后会有多厚？">
         If you fold a piece of paper in half 42 times, how thick would it be?
       </p>
       <div id="quiz-options">
-        <button class="quiz-option" onclick="answerQuiz(this, false)">About 1 metre</button>
-        <button class="quiz-option" onclick="answerQuiz(this, false)">Taller than a building</button>
-        <button class="quiz-option" onclick="answerQuiz(this, true)">Reaches the Moon</button>
-        <button class="quiz-option" onclick="answerQuiz(this, false)">Wraps around Earth</button>
+        <button class="quiz-option" onclick="answerQuiz(this, false)" data-en="About 1 metre" data-zh="大约 1 米">About 1 metre</button>
+        <button class="quiz-option" onclick="answerQuiz(this, false)" data-en="Taller than a building" data-zh="比建筑还高">Taller than a building</button>
+        <button class="quiz-option" onclick="answerQuiz(this, true)" data-en="Reaches the Moon" data-zh="能到月球">Reaches the Moon</button>
+        <button class="quiz-option" onclick="answerQuiz(this, false)" data-en="Wraps around Earth" data-zh="可绕地球一圈">Wraps around Earth</button>
       </div>
       <p id="quiz-feedback" style="font-size:13px;color:#555;margin-top:8px;display:none"></p>
-      <button class="secondary" id="next-quiz-btn" style="margin-top:8px;display:none" onclick="nextQuestion()">Next Question →</button>
+      <button class="secondary" id="next-quiz-btn" style="margin-top:8px;display:none" onclick="nextQuestion()" data-en="Next Question →" data-zh="下一题 →">Next Question →</button>
     </div>
 
     <!-- Spin the wheel / random suggestion -->
     <div class="activity-block">
-      <h3>🎲 What Should I Do?</h3>
-      <p style="font-size:13px;color:#555">Can't decide? Let us pick for you.</p>
-      <button class="action" style="width:100%;margin-top:4px" onclick="spinSuggestion()">Spin!</button>
+      <h3>🎲 <span data-en="What Should I Do?" data-zh="不知道做什么？">What Should I Do?</span> <span class="scenario-tag" data-en="🍵 best while queuing" data-zh="🍵 适合排队">🍵 best while queuing</span></h3>
+      <p style="font-size:13px;color:#555" data-en="Can't decide? Let us pick for you." data-zh="拿不定主意？让我们替你挑一个。">Can't decide? Let us pick for you.</p>
+      <button class="action" style="width:100%;margin-top:4px" onclick="spinSuggestion()" data-en="Spin!" data-zh="开转！">Spin!</button>
       <div id="spin-result" style="margin-top:10px;font-size:14px;font-weight:bold;color:teal;display:none"></div>
     </div>
   </div>
@@ -432,40 +1032,199 @@
        PAGE 6: AR MAP
   ══════════════════════ -->
   <div class="page" id="page-ar">
-    <h2>AR Navigate</h2>
+    <h2 data-en="Map" data-zh="地图">Map</h2>
 
-    <div class="ar-view">
-      [ Camera / AR View ]<br>
-      ⬆<br>
-      Follow the arrow back to Haidilao<br>
-      <small>120m · ~2 min walk</small>
+    <!-- Mode toggle -->
+    <div class="ar-mode-toggle">
+      <button class="active" id="ar-mode-platform" onclick="switchArMode('platform')" data-en="🚆 Platform" data-zh="🚆 站台">🚆 Platform</button>
+      <button id="ar-mode-walk" onclick="switchArMode('walk')" data-en="🚶 Walk to restaurant" data-zh="🚶 步行去餐厅">🚶 Walk to restaurant</button>
     </div>
 
-    <div class="card">
-      <p><b>Route:</b></p>
-      <p>✅ Exit Galaxy Arcade (Level 2)</p>
-      <p>📍 Head north past KTV Star Box — <b>60m</b></p>
-      <p>⬜ Turn right at the fountain — 40m</p>
-      <p>⬜ Haidilao entrance — 20m</p>
+    <!-- Platform mode -->
+    <div id="ar-platform">
+      <div class="ar-view"
+           data-en-html="[ Camera / AR View ]<br>⬆<br>Platform 2 — go up the escalator<br><small>50m · ~1 min</small>"
+           data-zh-html="[ 相机 / AR 视图 ]<br>⬆<br>站台 2 — 乘扶梯上行<br><small>50 米 · 约 1 分钟</small>">
+        [ Camera / AR View ]<br>
+        ⬆<br>
+        Platform 2 — go up the escalator<br>
+        <small>50m · ~1 min</small>
+      </div>
+      <div class="card">
+        <p data-en-html="<b>Route to Platform 2:</b>" data-zh-html="<b>到站台 2 的路线：</b>"><b>Route to Platform 2:</b></p>
+        <p data-en="✅ Tap on at gate" data-zh="✅ 在闸机刷卡">✅ Tap on at gate</p>
+        <p data-en-html="📍 Take escalator up — <b>20m</b>" data-zh-html="📍 乘扶梯上行 — <b>20 米</b>">📍 Take escalator up — <b>20m</b></p>
+        <p data-en="⬜ Turn left at concourse — 30m" data-zh="⬜ 在大厅左转 — 30 米">⬜ Turn left at concourse — 30m</p>
+        <p data-en-html="⬜ Stand near <b>Carriage 4 marker</b> (lighter crowd)"
+           data-zh-html="⬜ 在 <b>4 号车厢标记</b>处等车（人少）">⬜ Stand near <b>Carriage 4 marker</b> (lighter crowd)</p>
+      </div>
     </div>
 
-    <button class="action"
-      style="width:100%;padding:12px;font-size:15px;background:teal;"
-      id="arrived-btn"
-      onclick="arrivedAtRestaurant()">
-      I've Arrived!
-    </button>
+    <!-- Walk mode (to restaurant) -->
+    <div id="ar-walk" style="display:none">
+      <div class="ar-view"
+           data-en-html="[ Camera / AR View ]<br>⬆<br>Follow the arrow to Haidilao<br><small>350m · ~5 min walk</small>"
+           data-zh-html="[ 相机 / AR 视图 ]<br>⬆<br>跟随箭头前往海底捞<br><small>350 米 · 步行约 5 分钟</small>">
+        [ Camera / AR View ]<br>
+        ⬆<br>
+        Follow the arrow to Haidilao<br>
+        <small>350m · ~5 min walk</small>
+      </div>
+      <div class="card">
+        <p data-en-html="<b>Route:</b>" data-zh-html="<b>路线：</b>"><b>Route:</b></p>
+        <p data-en="✅ Exit Melbourne Central via Door B" data-zh="✅ 从墨尔本中央站 B 出口出">✅ Exit Melbourne Central via Door B</p>
+        <p data-en-html="📍 Head south down Swanston St — <b>250m</b>"
+           data-zh-html="📍 沿 Swanston 街南行 — <b>250 米</b>">📍 Head south down Swanston St — <b>250m</b></p>
+        <p data-en="⬜ Turn left into Little Bourke — 80m" data-zh="⬜ 左转进入 Little Bourke 街 — 80 米">⬜ Turn left into Little Bourke — 80m</p>
+        <p data-en="⬜ Haidilao entrance — 20m" data-zh="⬜ 海底捞门口 — 20 米">⬜ Haidilao entrance — 20m</p>
+      </div>
+      <button class="action"
+        style="width:100%;padding:12px;font-size:15px;background:teal;"
+        id="arrived-btn"
+        onclick="arrivedAtRestaurant()"
+        data-en="I've Arrived!" data-zh="我到了！">
+        I've Arrived!
+      </button>
+
+      <!-- Trip Complete celebration -->
+      <div class="celebrate-box" id="celebrate-box" style="display:none;margin-top:14px">
+        <div class="big">🎉</div>
+        <h2 data-en="You made it on time!" data-zh="你准时到了！">You made it on time!</h2>
+        <p data-en-html="Arrived 7:25 PM — <b>5 min before</b> your 7:30 booking."
+           data-zh-html="7:25 到达 — 比 7:30 预约 <b>早 5 分钟</b>。">Arrived 7:25 PM — <b>5 min before</b> your 7:30 booking.</p>
+        <p style="margin-top:8px;font-weight:bold;color:#333"
+           data-en="How was the journey?" data-zh="这趟行程感觉如何？">How was the journey?</p>
+        <div class="star-row" id="star-row">
+          <span onclick="rateTrip(1)">★</span>
+          <span onclick="rateTrip(2)">★</span>
+          <span onclick="rateTrip(3)">★</span>
+          <span onclick="rateTrip(4)">★</span>
+          <span onclick="rateTrip(5)">★</span>
+        </div>
+        <div id="trip-fb" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px">
+          <span class="feedback-chip" onclick="toggleTripChip(this)" data-en="On time ✓" data-zh="准时 ✓">On time ✓</span>
+          <span class="feedback-chip" onclick="toggleTripChip(this)" data-en="Reassuring" data-zh="让人安心">Reassuring</span>
+          <span class="feedback-chip" onclick="toggleTripChip(this)" data-en="Easy to follow" data-zh="路线清晰">Easy to follow</span>
+          <span class="feedback-chip" onclick="toggleTripChip(this)" data-en="Could improve" data-zh="可以改进">Could improve</span>
+        </div>
+        <button class="action" style="width:100%;margin-top:12px" onclick="finishTrip()" data-en="Submit & start new trip" data-zh="提交并开始新行程">
+          Submit & start new trip
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════
+       PAGE: SETTINGS
+  ══════════════════════ -->
+  <div class="page" id="page-settings">
+    <h2 data-en="Settings" data-zh="设置">Settings</h2>
+
+    <div class="settings-section">
+      <h3 data-en="Account" data-zh="账户">Account</h3>
+      <div class="settings-row tappable">
+        <span class="label" data-en="👤 Rachel · Casual Commuter" data-zh="👤 Rachel · 普通通勤者">👤 Rachel · Casual Commuter</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="settings-row tappable">
+        <span class="label" data-en="⭐ Saved trips" data-zh="⭐ 已保存的行程">⭐ Saved trips</span>
+        <span class="value"><span data-en="2 saved" data-zh="已保存 2 条">2 saved</span> <span class="chev">›</span></span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 data-en="Notifications" data-zh="通知">Notifications</h3>
+      <div class="settings-row">
+        <span class="label" data-en="Push notifications" data-zh="推送通知">Push notifications</span>
+        <div class="switch on" onclick="toggleSwitch(this)"></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-en="Delay alerts" data-zh="延误提醒">Delay alerts</span>
+        <div class="switch on" onclick="toggleSwitch(this)"></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-en="Platform changes" data-zh="站台变更">Platform changes</span>
+        <div class="switch on" onclick="toggleSwitch(this)"></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-en="Reassurance check-ins" data-zh="安心提醒">Reassurance check-ins</span>
+        <div class="switch on" onclick="toggleSwitch(this)"></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-en="Sound" data-zh="提示音">Sound</span>
+        <div class="switch" onclick="toggleSwitch(this)"></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 data-en="Trip preferences" data-zh="行程偏好">Trip preferences</h3>
+      <div class="settings-row tappable">
+        <span class="label" data-en="Default travel preference" data-zh="默认出行偏好">Default travel preference</span>
+        <span class="value"><span data-en="⚡ Fastest" data-zh="⚡ 最快">⚡ Fastest</span> <span class="chev">›</span></span>
+      </div>
+      <div class="settings-row tappable">
+        <span class="label" data-en="Home station" data-zh="常用车站">Home station</span>
+        <span class="value">Caulfield <span class="chev">›</span></span>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-en="Auto-detect location" data-zh="自动定位">Auto-detect location</span>
+        <div class="switch on" onclick="toggleSwitch(this)"></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 data-en="Display & Accessibility" data-zh="显示与无障碍">Display & Accessibility</h3>
+      <div class="settings-row">
+        <span class="label" data-en="Dark mode" data-zh="深色模式">Dark mode</span>
+        <div class="switch" onclick="toggleSwitch(this)"></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-en="Larger text" data-zh="大字号">Larger text</span>
+        <div class="switch" onclick="toggleSwitch(this)"></div>
+      </div>
+      <div class="settings-row tappable" onclick="cycleLanguage()">
+        <span class="label" data-en="Language" data-zh="语言">Language</span>
+        <span class="value"><span id="lang-label">English</span> <span class="chev">›</span></span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 data-en="Demo controls" data-zh="演示控制">Demo controls</h3>
+      <div class="settings-row tappable" onclick="toggleBannerState()">
+        <span class="label" data-en="↻ Switch reassurance state" data-zh="↻ 切换安心状态">↻ Switch reassurance state</span>
+        <span class="value" id="demo-state-label" data-en-prefix="Currently: " data-zh-prefix="当前：">Currently: ✓ on track</span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 data-en="About" data-zh="关于">About</h3>
+      <div class="settings-row tappable">
+        <span class="label" data-en="📨 Send feedback" data-zh="📨 发送反馈">📨 Send feedback</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="settings-row tappable">
+        <span class="label" data-en="📜 Privacy & terms" data-zh="📜 隐私与条款">📜 Privacy & terms</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-en="Version" data-zh="版本">Version</span>
+        <span class="value">1.0.0 (prototype)</span>
+      </div>
+      <div class="settings-row tappable" style="color:#cc4444">
+        <span class="label" data-en="↪ Sign out" data-zh="↪ 退出登录">↪ Sign out</span>
+      </div>
+    </div>
   </div>
 
   <!-- ══════════════════════
        BOTTOM TAB BAR
   ══════════════════════ -->
   <div class="tab-bar">
-    <button class="active" id="tab-progress"  onclick="switchTab('progress')">Queue</button>
-    <button id="tab-roster"   onclick="switchTab('roster')">Roster</button>
-    <button id="tab-recommend" onclick="switchTab('recommend')">Explore</button>
-    <button id="tab-passtime" onclick="switchTab('passtime')">Pass Time</button>
-    <button id="tab-ar"       onclick="switchTab('ar')">AR Map</button>
+    <button class="active" id="tab-progress"  onclick="switchTab('progress')" data-en="My Trip" data-zh="行程">My Trip</button>
+    <button id="tab-recommend" onclick="switchTab('recommend')" data-en="Plan" data-zh="规划">Plan</button>
+    <button id="tab-passtime" onclick="switchTab('passtime')" data-en="Pass Time" data-zh="消磨时间">Pass Time</button>
+    <button id="tab-ar"       onclick="switchTab('ar')" data-en="Map" data-zh="地图">Map</button>
+    <button id="tab-settings" onclick="switchTab('settings')" data-en="Settings" data-zh="设置">Settings</button>
   </div>
 
   <!-- ══════════════════════
@@ -474,7 +1233,7 @@
   <div class="confirm-box" id="confirm-box">
     <h3 id="confirm-title">Done!</h3>
     <p id="confirm-msg">Your action was completed.</p>
-    <button class="action" onclick="closeConfirm()">OK</button>
+    <button class="action" onclick="closeConfirm()" data-en="OK" data-zh="好">OK</button>
   </div>
 
 </div><!-- /phone -->
@@ -488,17 +1247,35 @@
     document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
     document.getElementById('page-' + tab).classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
+    // Notif drawer is anchored to My Trip header — close it whenever we leave
+    const drawer = document.getElementById('notif-drawer');
+    if (drawer) drawer.classList.remove('open');
     prevTab = tab;
   }
 
   // ── Menu ──────────────────────────────────────
+  const RESTAURANT_NAMES = {
+    'Haidilao Hot Pot': { en: 'Haidilao Hot Pot', zh: '海底捞火锅' },
+    'HeyTea':           { en: 'HeyTea',           zh: '喜茶' },
+    'Nayuki Ramen':     { en: 'Nayuki Ramen',     zh: '奈雪拉面' }
+  };
+  let currentMenuKey = null;
+
   function openMenu(name) {
+    currentMenuKey = name;
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('menu-title').textContent = name + ' — Menu';
-    document.getElementById('menu-queue-bar').textContent =
-      '🟢 Queue still active — ' + name + ' · still in line';
+    renderMenuHeader();
     document.getElementById('page-menu').classList.add('active');
     updateCartSummary();
+  }
+
+  function renderMenuHeader() {
+    if (!currentMenuKey) return;
+    const display = (RESTAURANT_NAMES[currentMenuKey] && RESTAURANT_NAMES[currentMenuKey][currentLang]) || currentMenuKey;
+    const titleSuffix = currentLang === 'zh' ? ' — 菜单' : ' — Menu';
+    const stickyTpl   = currentLang === 'zh' ? '🟢 排队中 — {n} · 你还在队伍中' : '🟢 Queue still active — {n} · still in line';
+    document.getElementById('menu-title').textContent = display + titleSuffix;
+    document.getElementById('menu-queue-bar').textContent = stickyTpl.replace('{n}', display);
   }
 
   function closeMenu() {
@@ -516,23 +1293,28 @@
     updateCartSummary();
   }
 
+  const MENU_NAMES = {
+    en: ['Spicy Mala Hotpot','Premium Wagyu Beef','Fresh Shrimp Balls','Brown Sugar Boba','Egg Custard Pudding'],
+    zh: ['麻辣火锅','顶级和牛','鲜虾滑','黑糖珍珠奶茶','蛋黄布丁']
+  };
+
   function updateCartSummary() {
-    const names = ['Spicy Mala Hotpot','Premium Wagyu Beef','Fresh Shrimp Balls','Brown Sugar Boba','Egg Custard Pudding'];
+    const names = MENU_NAMES[currentLang];
     const counts = Array.from(document.querySelectorAll('#page-menu .item-count'));
     const items = counts
       .map((el, i) => ({ name: names[i], n: parseInt(el.textContent) }))
       .filter(x => x.n > 0)
       .map(x => x.name + ' ×' + x.n);
     document.getElementById('cart-summary').textContent =
-      items.length ? items.join(', ') : 'Nothing added yet';
+      items.length ? items.join(', ') : T('cartEmpty');
   }
 
   function submitOrder() {
     const summary = document.getElementById('cart-summary').textContent;
-    if (summary === 'Nothing added yet') {
-      showConfirm('Cart is empty', 'Please add at least one item before confirming.');
+    if (summary === T('cartEmpty')) {
+      showConfirm(T('cartEmptyTitle'), T('cartEmptyMsg'));
     } else {
-      showConfirm('Pre-order Confirmed! 🎉', 'Your order will be ready when you arrive:\n' + summary);
+      showConfirm(T('orderConfirmedTitle'), T('orderConfirmedMsg') + summary);
     }
   }
 
@@ -550,61 +1332,87 @@
 
   function submitFeedback(id) {
     document.getElementById(id).classList.remove('open');
-    showConfirm('Thanks for your report! 🙏',
-      'Your feedback helps other users know the real wait time.');
+    showConfirm(T('feedbackThanksTitle'), T('feedbackThanksMsg'));
   }
 
-  // ── Queue Roster ──────────────────────────────
-  let rosterQueue = [
-    'A-047 &nbsp;YOU · 4 pax &nbsp;⬅ Your turn next!',
-    'A-048 &nbsp;Sun Xin · 2 pax',
-    'A-049 &nbsp;Xu Ping · 3 pax',
-    'A-050 &nbsp;Zhou Rui · 4 pax'
-  ];
-  let rosterPos = 0;
+  // ── Inline Roster (per-restaurant) ────────────
+  function toggleRoster(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
 
-  function callNextInRoster() {
-    const currentEl = document.getElementById('next-in-line');
+  function callNextInRoster(rosterId) {
+    const panel = document.getElementById(rosterId);
+    if (!panel) return;
+    const currentEl = panel.querySelector('.roster-item.current');
     if (!currentEl) return;
 
-    // Cross off current
     currentEl.classList.remove('current');
     currentEl.classList.add('done');
-    currentEl.removeAttribute('id');
 
-    // Advance: make next row "current"
-    const allRows = document.querySelectorAll('#roster-list .roster-item');
-    const doneCount = document.querySelectorAll('#roster-list .roster-item.done').length;
+    const allRows = panel.querySelectorAll('.roster-item');
+    const doneCount = panel.querySelectorAll('.roster-item.done').length;
     const nextRow = allRows[doneCount];
     if (nextRow) {
       nextRow.classList.add('current');
-      nextRow.setAttribute('id', 'next-in-line');
-
-      const isYou = nextRow.textContent.includes('YOU');
-      if (isYou) {
-        showConfirm('Your number is up! 🎉', 'A-047 — Please head to Haidilao now!');
+      const youToken = currentLang === 'zh' ? '你' : 'YOU';
+      if (nextRow.textContent.includes(youToken)) {
+        const num = nextRow.textContent.trim().split(youToken)[0].trim();
+        showConfirm(T('yourTurnTitle'), num + ' ' + T('yourTurnSuffix'));
       }
     } else {
-      showConfirm('Queue ended', 'No more entries in the roster.');
+      showConfirm(T('queueEndedTitle'), T('queueEndedMsg'));
     }
   }
 
-  // ── AR: Arrived ───────────────────────────────
+  // ── AR: Arrived → Trip Complete (People Watchers step 11) ──
+  let hasArrived = false;
+
   function arrivedAtRestaurant() {
+    hasArrived = true;
     const btn = document.getElementById('arrived-btn');
-    btn.textContent = '✅ Welcome! Table being prepared...';
+    // Make it switchable via i18n: replace data-en/data-zh with the "arrived" label
+    btn.dataset.en = '✅ Arrived';
+    btn.dataset.zh = '✅ 已到达';
+    btn.textContent = currentLang === 'zh' ? btn.dataset.zh : btn.dataset.en;
     btn.style.background = 'green';
     btn.disabled = true;
-    showConfirm('Welcome to Haidilao! 🎉',
-      'Your table is being prepared. Please check in at the front desk.\n\nThank you for using SmartQueue!');
+    document.getElementById('celebrate-box').style.display = 'block';
+    document.getElementById('celebrate-box').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  let tripRating = 0;
+  function rateTrip(stars) {
+    tripRating = stars;
+    document.querySelectorAll('#star-row span').forEach((s, i) => {
+      s.classList.toggle('lit', i < stars);
+    });
+  }
+
+  function toggleTripChip(chip) {
+    chip.classList.toggle('selected');
+  }
+
+  function finishTrip() {
+    const chips = document.querySelectorAll('#trip-fb .feedback-chip.selected');
+    const tags = Array.from(chips).map(c => c.textContent).join(', ') || T('tripFeedbackTags');
+    showConfirm(T('tripFeedbackTitle'),
+      T('tripRating') + (tripRating || 0) + '/5 · ' + tags + T('tripFeedbackReady'));
   }
 
   // ── Pass Time: Word card ──────────────────────
   const words = [
-    { word: 'Queue',   def: '/kjuː/ — A line of people waiting. "There\'s always a long queue at Haidilao!"' },
-    { word: 'Savor',   def: '/ˈseɪvər/ — To enjoy food slowly and fully. "Savor every bite of hotpot."' },
-    { word: 'Ambient', def: '/ˈæmbiənt/ — Relating to the surrounding environment. "The ambient noise in the mall was relaxing."' },
-    { word: 'Linger',  def: '/ˈlɪŋɡər/ — To stay somewhere longer than expected. "We loved to linger over our meal."' },
+    { word: 'Queue',   def: {
+        en: '/kjuː/ — A line of people waiting. "There\'s always a long queue at Haidilao!"',
+        zh: '/kjuː/ — 排队的一行人。"海底捞总是排长队！"' } },
+    { word: 'Savor',   def: {
+        en: '/ˈseɪvər/ — To enjoy food slowly and fully. "Savor every bite of hotpot."',
+        zh: '/ˈseɪvər/ — 慢慢享用食物。"细细品味火锅的每一口。"' } },
+    { word: 'Ambient', def: {
+        en: '/ˈæmbiənt/ — Relating to the surrounding environment. "The ambient noise in the mall was relaxing."',
+        zh: '/ˈæmbiənt/ — 与周围环境相关的。"商场的环境噪音让人放松。"' } },
+    { word: 'Linger',  def: {
+        en: '/ˈlɪŋɡər/ — To stay somewhere longer than expected. "We loved to linger over our meal."',
+        zh: '/ˈlɪŋɡər/ — 逗留比预期更久。"我们喜欢慢慢享用这顿饭。"' } },
   ];
   let wordIdx = 0;
 
@@ -619,7 +1427,7 @@
     wordIdx = (wordIdx + 1) % words.length;
     const card = document.querySelector('.word-card');
     card.querySelector('.word').textContent = words[wordIdx].word;
-    card.querySelector('.meaning').textContent = words[wordIdx].def;
+    card.querySelector('.meaning').textContent = words[wordIdx].def[currentLang];
     card.querySelector('.meaning').style.display = 'none';
     const hint = card.querySelector('div:not(.word):not(.meaning)');
     if (hint) hint.style.display = '';
@@ -628,52 +1436,69 @@
   // ── Pass Time: Quiz ───────────────────────────
   const questions = [
     {
-      q: 'If you fold a piece of paper in half 42 times, how thick would it be?',
-      opts: ['About 1 metre','Taller than a building','Reaches the Moon','Wraps around Earth'],
+      q: { en: 'If you fold a piece of paper in half 42 times, how thick would it be?',
+           zh: '一张纸对折 42 次后会有多厚？' },
+      opts: { en: ['About 1 metre','Taller than a building','Reaches the Moon','Wraps around Earth'],
+              zh: ['大约 1 米','比建筑还高','能到月球','可绕地球一圈'] },
       answer: 2
     },
     {
-      q: 'A group of flamingos is called a...?',
-      opts: ['Pack','Flamboyance','Colony','Flutter'],
+      q: { en: 'A group of flamingos is called a...?',
+           zh: '一群火烈鸟的英文集合名词是…？' },
+      opts: { en: ['Pack','Flamboyance','Colony','Flutter'],
+              zh: ['Pack','Flamboyance','Colony','Flutter'] },
       answer: 1
     },
     {
-      q: 'How many muscles does it take to take a single step when walking?',
-      opts: ['About 5','About 20','Over 200','Exactly 42'],
+      q: { en: 'How many muscles does it take to take a single step when walking?',
+           zh: '走一步路需要用到多少块肌肉？' },
+      opts: { en: ['About 5','About 20','Over 200','Exactly 42'],
+              zh: ['约 5 块','约 20 块','超过 200 块','正好 42 块'] },
       answer: 2
     },
     {
-      q: 'Honey never spoils. How old is the oldest edible honey ever found?',
-      opts: ['100 years','500 years','3,000 years','10,000 years'],
+      q: { en: 'Honey never spoils. How old is the oldest edible honey ever found?',
+           zh: '蜂蜜不会变质。已知最古老仍可食用的蜂蜜有多少年？' },
+      opts: { en: ['100 years','500 years','3,000 years','10,000 years'],
+              zh: ['100 年','500 年','3,000 年','10,000 年'] },
       answer: 2
     },
     {
-      q: 'If you removed all the empty space from atoms in the human body, how big would we be?',
-      opts: ['Size of a grape','Size of a grain of sugar','Smaller than a dust particle','Invisible to the naked eye'],
+      q: { en: 'If you removed all the empty space from atoms in the human body, how big would we be?',
+           zh: '若去掉人体原子中所有的空隙，人会变成多大？' },
+      opts: { en: ['Size of a grape','Size of a grain of sugar','Smaller than a dust particle','Invisible to the naked eye'],
+              zh: ['一颗葡萄大小','一粒糖大小','比尘埃还小','肉眼看不见'] },
       answer: 1
     },
     {
-      q: 'Octopuses have three hearts. What colour is their blood?',
-      opts: ['Red','Yellow','Blue','Clear'],
+      q: { en: 'Octopuses have three hearts. What colour is their blood?',
+           zh: '章鱼有三颗心脏，它们的血液是什么颜色？' },
+      opts: { en: ['Red','Yellow','Blue','Clear'],
+              zh: ['红色','黄色','蓝色','透明'] },
       answer: 2
     },
   ];
   let quizIdx = 0;
   let quizAnswered = false;
 
+  const QUIZ_FEEDBACK = {
+    en: { correct: '✅ Correct! Well done.', wrong: '❌ Not quite — see the correct answer above.' },
+    zh: { correct: '✅ 答对了！太棒了。', wrong: '❌ 还不对 — 正确答案已高亮。' }
+  };
+
   function answerQuiz(btn, isCorrect) {
     if (quizAnswered) return;
     quizAnswered = true;
     const opts = document.querySelectorAll('.quiz-option');
     opts.forEach(o => o.disabled = true);
+    const fb = QUIZ_FEEDBACK[currentLang];
     if (isCorrect) {
       btn.classList.add('correct');
-      document.getElementById('quiz-feedback').textContent = '✅ Correct! Well done.';
+      document.getElementById('quiz-feedback').textContent = fb.correct;
     } else {
       btn.classList.add('wrong');
-      // Highlight correct answer
       opts[questions[quizIdx].answer].classList.add('correct');
-      document.getElementById('quiz-feedback').textContent = '❌ Not quite — see the correct answer above.';
+      document.getElementById('quiz-feedback').textContent = fb.wrong;
     }
     document.getElementById('quiz-feedback').style.display = 'block';
     document.getElementById('next-quiz-btn').style.display = 'inline-block';
@@ -683,10 +1508,10 @@
     quizIdx = (quizIdx + 1) % questions.length;
     quizAnswered = false;
     const q = questions[quizIdx];
-    document.getElementById('quiz-question').textContent = q.q;
+    document.getElementById('quiz-question').textContent = q.q[currentLang];
     const opts = document.querySelectorAll('.quiz-option');
     opts.forEach((o, i) => {
-      o.textContent = q.opts[i];
+      o.textContent = q.opts[currentLang][i];
       o.className = 'quiz-option';
       o.disabled = false;
       o.onclick = function() { answerQuiz(this, i === q.answer); };
@@ -696,19 +1521,32 @@
   }
 
   // ── Pass Time: Spin ───────────────────────────
-  const suggestions = [
-    '🕹️ Head to Galaxy Arcade — try the claw machine!',
-    '📖 Flip through a word card to learn something new.',
-    '🎤 Book a 30-min KTV box with your group.',
-    '☕ Grab a drink and people-watch near the fountain.',
-    '📸 Find a photogenic spot in the mall.',
-    '🛍️ Window-shop at the street market (free entry).',
-    '🎯 Challenge a friend to the trivia quiz.',
-    '😴 Find a comfy seat and rest — you\'ve earned it.',
-  ];
+  const suggestions = {
+    en: [
+      '🕹️ Head to Galaxy Arcade — try the claw machine!',
+      '📖 Flip through a word card to learn something new.',
+      '🎤 Book a 30-min KTV box with your group.',
+      '☕ Grab a drink and people-watch near the fountain.',
+      '📸 Find a photogenic spot in the mall.',
+      '🛍️ Window-shop at the street market (free entry).',
+      '🎯 Challenge a friend to the trivia quiz.',
+      '😴 Find a comfy seat and rest — you\'ve earned it.',
+    ],
+    zh: [
+      '🕹️ 去 Galaxy 游戏厅 — 试试夹娃娃机！',
+      '📖 翻一张单词卡，学个新词。',
+      '🎤 和朋友订一间 30 分钟的 KTV 包间。',
+      '☕ 买杯饮料，去喷泉边看人来人往。',
+      '📸 在商场里找个适合拍照的角落。',
+      '🛍️ 去街边市集逛逛（免费入场）。',
+      '🎯 找朋友 PK 一下小测验。',
+      '😴 找个舒服的位子歇一歇 — 你应得的。',
+    ]
+  };
 
   function spinSuggestion() {
-    const pick = suggestions[Math.floor(Math.random() * suggestions.length)];
+    const list = suggestions[currentLang];
+    const pick = list[Math.floor(Math.random() * list.length)];
     const el = document.getElementById('spin-result');
     el.style.display = 'block';
     el.textContent = pick;
@@ -724,6 +1562,216 @@
   function closeConfirm() {
     document.getElementById('confirm-box').classList.remove('show');
     // Re-enable arrived button if needed
+  }
+
+  // ── Reassurance Card state (People Watchers core) ──
+  let isLate = false;
+
+  function toggleBannerState() {
+    isLate = !isLate;
+    const card = document.getElementById('reassurance-card');
+    document.getElementById('rc-icon').textContent = isLate ? '⚠' : '✓';
+    card.classList.toggle('late', isLate);
+    if (!isLate) document.getElementById('alternatives-panel').classList.remove('open');
+    refreshDynamicI18n();
+  }
+
+  function onReassuranceClick() {
+    if (isLate) {
+      toggleAlternatives();
+      document.getElementById('alternatives-panel').scrollIntoView({behavior:'smooth', block:'nearest'});
+    } else {
+      showConfirm(T('onTrackPopupTitle'), T('onTrackPopupMsg'));
+    }
+  }
+
+  // ── Settings: toggle switches ──
+  function toggleSwitch(el) {
+    el.classList.toggle('on');
+  }
+
+  // ── Settings: language switcher (English ↔ 中文) ──
+  let currentLang = 'en';
+
+  function cycleLanguage() {
+    currentLang = currentLang === 'en' ? 'zh' : 'en';
+    setLanguage(currentLang);
+    document.getElementById('lang-label').textContent =
+      currentLang === 'en' ? 'English' : '中文';
+  }
+
+  function setLanguage(lang) {
+    // Plain text elements
+    document.querySelectorAll('[data-en]').forEach(el => {
+      const txt = el.dataset[lang];
+      if (txt !== undefined) el.textContent = txt;
+    });
+    // HTML-content elements (contain inner markup like <b>)
+    document.querySelectorAll('[data-en-html]').forEach(el => {
+      const html = el.dataset[lang + 'Html'];
+      if (html !== undefined) el.innerHTML = html;
+    });
+    // Browser tab title + tooltips
+    document.title = lang === 'zh' ? 'SmartQueue — 行程伴侣' : 'SmartQueue — Trip Companion';
+    document.querySelectorAll('[data-title-en]').forEach(el => {
+      const t = el.dataset[lang === 'zh' ? 'titleZh' : 'titleEn'];
+      if (t) el.title = t;
+    });
+    // Refresh language-aware dynamic content
+    refreshDynamicI18n();
+  }
+
+  // Re-renders dynamic strings (reassurance state, demo label, pass-time content)
+  // using the current language.
+  function refreshDynamicI18n() {
+    // Reassurance card
+    const text = document.getElementById('rc-text');
+    const conf = document.getElementById('rc-conf');
+    const detail = document.getElementById('rc-detail');
+    if (text && conf && detail) {
+      if (isLate) {
+        text.textContent  = T('rcLate');
+        conf.textContent  = T('rcConfLow');
+        detail.innerHTML  = T('rcLateDetail');
+      } else {
+        text.textContent  = T('rcOnTrack');
+        conf.textContent  = T('rcConfHigh');
+        detail.innerHTML  = T('rcOnTrackDetail');
+      }
+    }
+    // Demo label
+    const demoLabel = document.getElementById('demo-state-label');
+    if (demoLabel) {
+      demoLabel.textContent = T('demoPrefix') + (isLate ? T('demoLate') : T('demoOnTrack'));
+    }
+    // Pass-time word card (shows current word's translated definition)
+    const wcard = document.querySelector('.word-card');
+    if (wcard && words[wordIdx]) {
+      wcard.querySelector('.meaning').textContent = words[wordIdx].def[currentLang];
+    }
+    // Quiz: re-render current question text in selected language
+    const qEl = document.getElementById('quiz-question');
+    if (qEl && questions[quizIdx]) {
+      qEl.textContent = questions[quizIdx].q[currentLang];
+      const opts = document.querySelectorAll('.quiz-option');
+      opts.forEach((o, i) => { o.textContent = questions[quizIdx].opts[currentLang][i]; });
+    }
+    // Cart summary (re-derive in current language)
+    if (document.getElementById('cart-summary')) updateCartSummary();
+    // Menu header (if a menu was opened)
+    renderMenuHeader();
+  }
+
+  // Lookup helper for dynamic JS strings
+  function T(key) {
+    return (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
+  }
+
+  // ── i18n string table for dynamic JS-rendered text ──
+  const I18N = {
+    en: {
+      rcOnTrack: "You'll make your 7:30 booking",
+      rcLate: "You may not make it on time",
+      rcConfHigh: 'High',
+      rcConfLow: 'Low',
+      rcOnTrackDetail: 'Predicted arrival <b>7:25 PM</b> · 5 min before booking',
+      rcLateDetail: 'Train delayed 9 min · ETA <b>7:38 PM</b> · 8 min late',
+      demoPrefix: 'Currently: ',
+      demoOnTrack: '✓ on track',
+      demoLate: '⚠ running late',
+      onTrackPopupTitle: "You're on track ✓",
+      onTrackPopupMsg: 'Train 6:42 · Platform 2 · 5 min walk · 12 ahead at Haidilao. You should arrive ~7:25.',
+      cartEmpty: 'Nothing added yet',
+      cartEmptyTitle: 'Cart is empty',
+      cartEmptyMsg: 'Please add at least one item before confirming.',
+      orderConfirmedTitle: 'Pre-order Confirmed! 🎉',
+      orderConfirmedMsg: 'Your order will be ready when you arrive:\n',
+      feedbackThanksTitle: 'Thanks for your report! 🙏',
+      feedbackThanksMsg: 'Your feedback helps other users know the real wait time.',
+      yourTurnTitle: 'Your number is up! 🎉',
+      yourTurnSuffix: ' — please head over now!',
+      queueEndedTitle: 'Queue ended',
+      queueEndedMsg: 'No more entries in this roster.',
+      tripUpdatedTitle: 'Trip updated ✓',
+      tripUpdatedMsg: 'Reassurance engine is recalculating your arrival time...',
+      tripFeedbackTitle: 'Thanks for the feedback! 🙏',
+      tripFeedbackTags: 'no tags',
+      tripFeedbackReady: '\n\nReady when you are for the next trip.',
+      tripRating: 'Rating: ',
+    },
+    zh: {
+      rcOnTrack: '你能赶上 7:30 的预约',
+      rcLate: '可能赶不上预约时间',
+      rcConfHigh: '高',
+      rcConfLow: '低',
+      rcOnTrackDetail: '预计到达 <b>7:25 PM</b> · 比预约早 5 分钟',
+      rcLateDetail: '列车延误 9 分钟 · 预计 <b>7:38 PM</b> 到达 · 迟 8 分钟',
+      demoPrefix: '当前：',
+      demoOnTrack: '✓ 准时',
+      demoLate: '⚠ 可能迟到',
+      onTrackPopupTitle: '一切顺利 ✓',
+      onTrackPopupMsg: '列车 6:42 · 站台 2 · 步行 5 分钟 · 海底捞前面还有 12 桌。预计 7:25 到达。',
+      cartEmpty: '还没添加任何菜品',
+      cartEmptyTitle: '购物车是空的',
+      cartEmptyMsg: '请至少加入一道菜再确认。',
+      orderConfirmedTitle: '预点单成功！🎉',
+      orderConfirmedMsg: '到店即可享用：\n',
+      feedbackThanksTitle: '感谢反馈！🙏',
+      feedbackThanksMsg: '你的反馈能帮助其他用户了解真实排队情况。',
+      yourTurnTitle: '叫到你了！🎉',
+      yourTurnSuffix: '— 请立刻前往！',
+      queueEndedTitle: '队列已结束',
+      queueEndedMsg: '此队列没有更多条目。',
+      tripUpdatedTitle: '行程已更新 ✓',
+      tripUpdatedMsg: '正在重新计算到达时间…',
+      tripFeedbackTitle: '感谢反馈！🙏',
+      tripFeedbackTags: '无标签',
+      tripFeedbackReady: '\n\n随时准备好开始下一段行程。',
+      tripRating: '评分：',
+    }
+  };
+
+  function toggleAlternatives() {
+    document.getElementById('alternatives-panel').classList.toggle('open');
+  }
+
+  // ── AR mode toggle ──
+  function switchArMode(mode) {
+    document.getElementById('ar-platform').style.display = mode === 'platform' ? 'block' : 'none';
+    document.getElementById('ar-walk').style.display     = mode === 'walk'     ? 'block' : 'none';
+    document.getElementById('ar-mode-platform').classList.toggle('active', mode === 'platform');
+    document.getElementById('ar-mode-walk').classList.toggle('active',     mode === 'walk');
+  }
+
+  // ── Notifications drawer (People Watchers step 8) ──
+  function toggleNotifications(e) {
+    if (e) e.stopPropagation();
+    const drawer = document.getElementById('notif-drawer');
+    drawer.classList.toggle('open');
+    if (drawer.classList.contains('open')) {
+      // mark as read
+      document.querySelectorAll('#notif-drawer .notif-item.unread')
+        .forEach(n => n.classList.remove('unread'));
+      document.getElementById('notif-badge').style.display = 'none';
+    }
+  }
+
+  // ── Edit-trip modal (People Watchers step 2-3) ──
+  function openTripModal(e) {
+    if (e) e.stopPropagation();
+    document.getElementById('trip-modal').classList.add('show');
+  }
+  function closeTripModal() {
+    document.getElementById('trip-modal').classList.remove('show');
+  }
+  function selectPref(btn) {
+    btn.parentElement.querySelectorAll('button')
+      .forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  function saveTripModal() {
+    closeTripModal();
+    showConfirm(T('tripUpdatedTitle'), T('tripUpdatedMsg'));
   }
 </script>
 </body>
