@@ -490,6 +490,20 @@
   }
   .switch.on { background: teal; }
   .switch.on::after { left: 18px; }
+
+  /* ── Mobile: drop the phone-frame, fill the screen ── */
+  @media (max-width: 500px) {
+    body { padding: 0; background: white; }
+    .phone {
+      width: 100%;
+      max-width: 100%;
+      height: 100vh;
+      height: 100dvh;     /* iOS Safari: avoid bottom toolbar overlap */
+      border: none;
+      border-radius: 0;
+      margin: 0;
+    }
+  }
 </style>
 </head>
 <body>
